@@ -23,3 +23,8 @@ Thumbs.db
 # Temporary files
 *.tmp
 *.log
+
+
+# Reference-only project
+dm_project.code-workspace
+SpaceDebrisRadar.AI/
