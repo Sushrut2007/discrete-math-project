@@ -1,9 +1,15 @@
-﻿import json
+﻿import sys
+from pathlib import Path
+import json
 import tempfile
 import unittest
-from pathlib import Path
 from unittest.mock import MagicMock, patch
 import pandas as pd
+
+# Make sure Python knows where project root is when running this test file directly
+project_root = Path(__file__).resolve().parent.parent
+if str(project_root) not in sys.path:
+    sys.path.insert(0, str(project_root))
 
 from src.data.config import REQUIRED_COLUMNS
 from src.data.collector import fetch_celestrak_data, save_snapshot, cleanup_old_snapshots
