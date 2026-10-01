@@ -104,4 +104,3 @@ def filter_leo_satellites(df, min_altitude=LEO_MIN_ALTITUDE_KM, max_altitude=LEO
 
     leo_df = result[(result["orbit_height"] >= min_altitude) & (result["orbit_height"] <= max_altitude)]
     return leo_df.reset_index(drop=True)
-

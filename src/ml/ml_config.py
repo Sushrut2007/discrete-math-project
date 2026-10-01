@@ -26,4 +26,3 @@ DEFAULT_SCORE_UNEVALUATED = np.nan
 
 # Random seed for reproducible clustering and anomaly scores
 RANDOM_SEED = 42
-

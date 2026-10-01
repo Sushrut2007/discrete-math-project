@@ -1,4 +1,4 @@
-from src.ml.config import (
+from src.ml.ml_config import (
     DEFAULT_ML_FEATURE_COLS,
     DEFAULT_N_CLUSTERS,
     DEFAULT_CONTAMINATION,
@@ -15,7 +15,7 @@ from src.ml.clustering import (
     cluster_satellites
 )
 from src.ml.anomaly import detect_cluster_anomalies
-from src.ml.pipeline import (
+from src.ml.ml_pipeline import (
     run_ml_pipeline,
     run_and_save_ml_results
 )

@@ -1,4 +1,4 @@
-﻿import sys
+import sys
 from datetime import datetime, timezone
 from pathlib import Path
 import json
@@ -10,7 +10,7 @@ project_root = Path(__file__).resolve().parent.parent.parent
 if str(project_root) not in sys.path:
     sys.path.insert(0, str(project_root))
 
-from src.data.config import (
+from src.data.constants import (
     CELESTRAK_URL,
     SNAPSHOT_DIR,
     COLLECTION_INTERVAL_HOURS,
@@ -155,7 +155,7 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     print("==================================================")
-    print(" Satellite Snapshot Collector")
+    print(" Satellite Snapshot Fetcher")
     print(f" URL: {args.url}")
     print(f" Cadence: Every {COLLECTION_INTERVAL_HOURS} hours")
     print(f" Rolling Retention: Keep last {RETENTION_DAYS} days (~60 snapshots)")

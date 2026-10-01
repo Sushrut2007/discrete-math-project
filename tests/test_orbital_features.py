@@ -9,8 +9,13 @@ project_root = Path(__file__).resolve().parent.parent
 if str(project_root) not in sys.path:
     sys.path.insert(0, str(project_root))
 
-from src.features.cleaner import clean_raw_data
-from src.features.orbital import (
+from src.features.preprocess import (
+    clean_raw_data,
+    standardize_features,
+    apply_standardization,
+    get_feature_matrix
+)
+from src.features.orbital_features import (
     calculate_orbital_period,
     calculate_semi_major_axis,
     calculate_orbit_height,
@@ -20,12 +25,7 @@ from src.features.orbital import (
     add_orbital_features,
     EARTH_RADIUS_KM
 )
-from src.features.scaler import (
-    standardize_features,
-    apply_standardization,
-    get_feature_matrix
-)
-from src.features.pipeline import prepare_features
+from src.features.feature_pipeline import prepare_features
 
 
 class TestOrbitalFeatures(unittest.TestCase):

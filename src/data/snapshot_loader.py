@@ -1,4 +1,4 @@
-﻿import sys
+import sys
 from pathlib import Path
 import json
 import pandas as pd
@@ -8,7 +8,7 @@ project_root = Path(__file__).resolve().parent.parent.parent
 if str(project_root) not in sys.path:
     sys.path.insert(0, str(project_root))
 
-from src.data.config import SNAPSHOT_DIR, REQUIRED_COLUMNS
+from src.data.constants import SNAPSHOT_DIR, REQUIRED_COLUMNS
 
 
 def list_snapshots(snapshot_dir=SNAPSHOT_DIR):

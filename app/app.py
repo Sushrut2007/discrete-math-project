@@ -10,9 +10,9 @@ project_root = Path(__file__).resolve().parent.parent
 if str(project_root) not in sys.path:
     sys.path.insert(0, str(project_root))
 
-from src.data.config import PROCESSED_DIR
-from src.ml.pipeline import run_ml_pipeline
-from src.ml.config import LABEL_ANOMALOUS, LABEL_NORMAL, LABEL_NOT_EVALUATED
+from src.data.constants import PROCESSED_DIR
+from src.ml.ml_pipeline import run_ml_pipeline
+from src.ml.ml_config import LABEL_ANOMALOUS, LABEL_NORMAL, LABEL_NOT_EVALUATED
 
 st.set_page_config(
     page_title="Satellite Orbital Anomaly Explorer",

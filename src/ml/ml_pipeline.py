@@ -7,9 +7,9 @@ project_root = Path(__file__).resolve().parent.parent.parent
 if str(project_root) not in sys.path:
     sys.path.insert(0, str(project_root))
 
-from src.data.config import PROCESSED_DIR
-from src.features.pipeline import prepare_features
-from src.ml.config import (
+from src.data.constants import PROCESSED_DIR
+from src.features.feature_pipeline import prepare_features
+from src.ml.ml_config import (
     DEFAULT_ML_FEATURE_COLS,
     DEFAULT_N_CLUSTERS,
     DEFAULT_CONTAMINATION,

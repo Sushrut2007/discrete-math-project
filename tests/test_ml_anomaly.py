@@ -9,7 +9,7 @@ project_root = Path(__file__).resolve().parent.parent
 if str(project_root) not in sys.path:
     sys.path.insert(0, str(project_root))
 
-from src.ml.config import (
+from src.ml.ml_config import (
     DEFAULT_ML_FEATURE_COLS,
     DEFAULT_N_CLUSTERS,
     DEFAULT_CONTAMINATION,
@@ -20,7 +20,7 @@ from src.ml.config import (
 )
 from src.ml.clustering import fit_kmeans, assign_clusters, cluster_satellites
 from src.ml.anomaly import detect_cluster_anomalies
-from src.ml.pipeline import run_ml_pipeline
+from src.ml.ml_pipeline import run_ml_pipeline
 
 
 class TestMLAnomaly(unittest.TestCase):

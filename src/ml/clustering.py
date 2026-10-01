@@ -2,7 +2,7 @@ import numpy as np
 import pandas as pd
 from sklearn.cluster import KMeans
 
-from src.ml.config import (
+from src.ml.ml_config import (
     DEFAULT_ML_FEATURE_COLS,
     DEFAULT_N_CLUSTERS,
     RANDOM_SEED
