@@ -1,10 +1,14 @@
-﻿import numpy as np
+import numpy as np
 
 # Standard Earth physical constants
 EARTH_MU = 398600.4418      # Earth gravitational parameter in km^3 / s^2 (G * M)
 EARTH_RADIUS_KM = 6378.137   # Earth equatorial radius in km (WGS84)
 SECONDS_PER_DAY = 86400      # Number of seconds in one day
 MINUTES_PER_DAY = 1440       # Number of minutes in one day
+
+# Standard Low Earth Orbit (LEO) boundaries in kilometers
+LEO_MIN_ALTITUDE_KM = 100.0   # Approximate atmospheric boundary
+LEO_MAX_ALTITUDE_KM = 2000.0  # Standard upper ceiling for Low Earth Orbit
 
 
 def calculate_orbital_period(mean_motion):
@@ -83,3 +87,21 @@ def add_orbital_features(df):
     result["orbital_speed"] = calculate_orbital_speed(a)
 
     return result
+
+
+def filter_leo_satellites(df, min_altitude=LEO_MIN_ALTITUDE_KM, max_altitude=LEO_MAX_ALTITUDE_KM):
+    """
+    Filters satellite dataframe to retain only objects in Low Earth Orbit (LEO).
+    LEO is conventionally defined as orbits with mean altitude <= 2,000 km.
+    Requires 'orbit_height' column (or calculates it if not present).
+    """
+    if df is None or len(df) == 0:
+        return df
+
+    result = df.copy()
+    if "orbit_height" not in result.columns and "MEAN_MOTION" in result.columns:
+        result = add_orbital_features(result)
+
+    leo_df = result[(result["orbit_height"] >= min_altitude) & (result["orbit_height"] <= max_altitude)]
+    return leo_df.reset_index(drop=True)
+

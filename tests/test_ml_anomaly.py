@@ -200,12 +200,12 @@ class TestMLAnomaly(unittest.TestCase):
                 "INCLINATION": 51.64
             },
             {
-                "NORAD_CAT_ID": 28885,
-                "OBJECT_NAME": "SYRACUSE 3A",
+                "NORAD_CAT_ID": 43013,
+                "OBJECT_NAME": "STARLINK-1007",
                 "EPOCH": "2026-09-30T12:00:00.000",
-                "MEAN_MOTION": 1.0027,
-                "ECCENTRICITY": 0.0002,
-                "INCLINATION": 0.05
+                "MEAN_MOTION": 15.06,
+                "ECCENTRICITY": 0.0001,
+                "INCLINATION": 53.05
             }
         ])
 
