@@ -6,9 +6,7 @@ from src.features.orbital import (
     calculate_perigee,
     calculate_apogee,
     calculate_orbital_speed,
-    add_orbital_features,
-    filter_leo_satellites,
-    LEO_MAX_ALTITUDE_KM
+    add_orbital_features
 )
 from src.features.scaler import (
     standardize_features,
@@ -30,8 +28,6 @@ __all__ = [
     "calculate_apogee",
     "calculate_orbital_speed",
     "add_orbital_features",
-    "filter_leo_satellites",
-    "LEO_MAX_ALTITUDE_KM",
     "standardize_features",
     "apply_standardization",
     "get_feature_matrix",

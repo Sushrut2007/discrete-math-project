@@ -10,23 +10,18 @@ if str(project_root) not in sys.path:
 from src.data.config import PROCESSED_DIR
 from src.data.loader import load_latest_snapshot
 from src.features.cleaner import clean_raw_data
-from src.features.orbital import (
-    add_orbital_features,
-    filter_leo_satellites,
-    LEO_MAX_ALTITUDE_KM
-)
+from src.features.orbital import add_orbital_features
 from src.features.scaler import standardize_features, DEFAULT_FEATURE_COLUMNS
 
 
-def prepare_features(df=None, feature_cols=None, leo_only=True):
+def prepare_features(df=None, feature_cols=None):
     """
     Main pipeline function for this branch:
     1. Loads the latest raw snapshot (if df is not provided)
     2. Cleans and validates raw satellite rows
     3. Calculates derived orbital features (a, period, apogee, perigee, speed, height)
-    4. Filters for Low Earth Orbit (LEO, altitude <= 2,000 km) if leo_only=True
-    5. Standardizes numerical features for later ML and Graph analysis
-    6. Preserves all identifying fields (NORAD_CAT_ID, OBJECT_NAME, EPOCH)
+    4. Standardizes numerical features for later ML and Graph analysis
+    5. Preserves all identifying fields (NORAD_CAT_ID, OBJECT_NAME, EPOCH)
 
     Returns:
         processed_df: Fully prepared dataframe
@@ -44,17 +39,11 @@ def prepare_features(df=None, feature_cols=None, leo_only=True):
     orbital_df = add_orbital_features(cleaned_df)
     print("Added orbital features: period, semi_major_axis, orbit_height, perigee, apogee, orbital_speed")
 
-    # Step 3: Filter for LEO satellites (<= 2000 km)
-    if leo_only:
-        orbital_df = filter_leo_satellites(orbital_df)
-        print(f"Filtered for LEO satellites (altitude <= {LEO_MAX_ALTITUDE_KM} km): {len(orbital_df)} satellites retained")
-
-    # Step 4: Standardize core numerical features
+    # Step 3: Standardize core numerical features
     processed_df, scaler_params = standardize_features(orbital_df, feature_cols=feature_cols)
     print("Standardized features ready for ML and Graph algorithms")
 
     return processed_df, scaler_params
-
 
 
 def process_and_save_latest_features(output_filename="latest_features.csv"):
