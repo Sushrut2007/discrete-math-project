@@ -5,15 +5,11 @@ from data_loader import load_full_data
 st.set_page_config(page_title="Satellite Explorer", layout="wide")
 df = load_full_data()
 
-st.title("Satellite Explorer")
-st.markdown("Search and filter the catalog to inspect specific anomaly assessments.")
+st.title("Spacecraft Tracking & Diagnostics")
 
-st.sidebar.markdown("### Catalog Filters")
-search_q = st.sidebar.text_input("Catalog ID / Object Name", placeholder="e.g. 25544 or STARLINK")
-score_filter = st.sidebar.selectbox("Integrated Score", ["All", 0, 1, 2, 3])
-ml_filter = st.sidebar.selectbox("ML Flag", ["All", "Flagged", "Nominal"])
-dm_filter = st.sidebar.selectbox("DM Flag", ["All", "Flagged", "Nominal"])
-temp_filter = st.sidebar.selectbox("Temporal Flag", ["All", "Flagged", "Nominal"])
+st.sidebar.markdown("### Catalog Search")
+search_q = st.sidebar.text_input("Object Name or ID", placeholder="e.g. 25544 or ISS")
+status_filter = st.sidebar.selectbox("System Status", ["All", "Nominal", "Warning", "Critical"])
 
 filtered = df.copy()
 if search_q:
@@ -22,80 +18,79 @@ if search_q:
         filtered['OBJECT_NAME'].str.lower().str.contains(q, na=False) |
         filtered['NORAD_CAT_ID'].astype(str).str.contains(q, na=False)
     ]
-if score_filter != "All":
-    filtered = filtered[filtered['anomaly_score'] == score_filter]
-if ml_filter != "All":
-    filtered = filtered[filtered['ml_flag'] == (1 if ml_filter == "Flagged" else 0)]
-if dm_filter != "All":
-    filtered = filtered[filtered['dm_flag'] == (1 if dm_filter == "Flagged" else 0)]
-if temp_filter != "All":
-    filtered = filtered[filtered['temporal_flag'] == (1 if temp_filter == "Flagged" else 0)]
-
-st.caption(f"Displaying **{len(filtered):,}** matching records")
-
-display_cols = ['NORAD_CAT_ID', 'OBJECT_NAME', 'anomaly_score', 'ml_flag', 'dm_flag', 'temporal_flag']
-display_df = filtered[display_cols].copy()
-display_df['ml_flag'] = display_df['ml_flag'].map({1: '⚠️', 0: '✓'})
-display_df['dm_flag'] = display_df['dm_flag'].map({1: '⚠️', 0: '✓'})
-display_df['temporal_flag'] = display_df['temporal_flag'].map({1: '⚠️', 0: '✓'})
-
-st.dataframe(display_df.rename(columns={
-    'OBJECT_NAME': 'Object Name', 'NORAD_CAT_ID': 'Catalog ID', 'anomaly_score': 'Final Score',
-    'ml_flag': 'ML', 'dm_flag': 'DM', 'temporal_flag': 'Temporal'
-}), use_container_width=True, hide_index=True)
-
-st.markdown("---")
-st.markdown("### Detailed Object Inspection")
+if status_filter == "Nominal":
+    filtered = filtered[filtered['anomaly_score'] == 0]
+elif status_filter == "Warning":
+    filtered = filtered[filtered['anomaly_score'].isin([1, 2])]
+elif status_filter == "Critical":
+    filtered = filtered[filtered['anomaly_score'] == 3]
 
 sat_options = filtered['NORAD_CAT_ID'].astype(str) + " - " + filtered['OBJECT_NAME']
 if len(sat_options) > 0:
-    selected_label = st.selectbox("Select Target", sat_options)
+    selected_label = st.selectbox("Select Spacecraft:", sat_options)
     selected_norad = int(selected_label.split(" - ")[0])
     sat = df[df['NORAD_CAT_ID'] == selected_norad].iloc[0]
     
-    with st.container(border=True):
-        col_hdr, col_score = st.columns([3, 1])
-        with col_hdr:
-            st.markdown(f"## {sat['OBJECT_NAME']}")
-            st.markdown(f"**Catalog ID:** {sat['NORAD_CAT_ID']} &nbsp;|&nbsp; **Epoch:** {str(sat['EPOCH'])[:10] if 'EPOCH' in sat else 'N/A'}")
-        with col_score:
-            score_color = "#4CAF50" if sat['anomaly_score'] == 0 else ("#FFC107" if sat['anomaly_score'] in [1, 2] else "#F44336")
-            st.markdown(f"<h1 style='text-align: right; color: {score_color};'>Score: {sat['anomaly_score']}/3</h1>", unsafe_allow_html=True)
+    st.markdown("---")
+    
+    # Status Header
+    score = sat['anomaly_score']
+    if score == 0:
+        status_text, color = "NOMINAL", "#4CAF50"
+    elif score in [1, 2]:
+        status_text, color = "WARNING", "#FFC107"
+    else:
+        status_text, color = "CRITICAL", "#F44336"
         
-        st.markdown("#### Evidence Matrix")
+    st.markdown(f"""
+    <div style='background-color: #1E2127; padding: 20px; border-radius: 10px; border: 1px solid {color};'>
+        <h2 style='margin-bottom: 0px;'>{sat['OBJECT_NAME']}</h2>
+        <p style='color: #8B949E; margin-top: 5px; font-size: 16px;'>Catalog ID: {sat['NORAD_CAT_ID']} | Observation Epoch: {str(sat['EPOCH'])[:10] if 'EPOCH' in sat else 'N/A'}</p>
+        <h3 style='color: {color}; margin-top: 10px;'>SYSTEM STATUS: {status_text}</h3>
+    </div>
+    """, unsafe_allow_html=True)
+    
+    st.markdown("<br>", unsafe_allow_html=True)
+    
+    # Physical Telemetry
+    st.markdown("### Current Orbital Telemetry")
+    c1, c2, c3, c4 = st.columns(4)
+    c1.metric("Orbit Altitude", f"{sat['orbit_height']:.2f} km" if 'orbit_height' in sat else "N/A")
+    c2.metric("Inclination", f"{sat['INCLINATION']:.2f}°" if 'INCLINATION' in sat else "N/A")
+    c3.metric("Eccentricity", f"{sat['ECCENTRICITY']:.5f}" if 'ECCENTRICITY' in sat else "N/A")
+    c4.metric("Semi-Major Axis", f"{sat['semi_major_axis']:.2f} km" if 'semi_major_axis' in sat else "N/A")
+    
+    # Anomaly Diagnostics (Simplified for the operator)
+    st.markdown("### Anomaly Diagnostics")
+    
+    if score == 0:
+        st.success("No anomalous behaviour detected in current state, neighborhood topology, or recent maneuvers.")
+    else:
+        reasons = []
+        if sat['ml_flag']: reasons.append("an unusual statistical orbital state")
+        if sat['dm_flag']: reasons.append("severe structural isolation from its orbital neighborhood")
+        if sat['temporal_flag']: reasons.append("an anomalous recent orbital maneuver or shift")
         
-        def render_status(flag, name):
-            color = "#F44336" if flag else "#4CAF50"
-            icon = "⚠️ Flagged" if flag else "✓ Nominal"
-            return f"<div style='background-color: #1E2127; padding: 10px; border-radius: 5px; border-left: 4px solid {color};'><b>{name}</b><br><span style='color: {color};'>{icon}</span></div>"
-
-        c1, c2, c3 = st.columns(3)
-        with c1: st.markdown(render_status(sat['ml_flag'], "Machine Learning"), unsafe_allow_html=True)
-        with c2: st.markdown(render_status(sat['dm_flag'], "DM Graph"), unsafe_allow_html=True)
-        with c3: st.markdown(render_status(sat['temporal_flag'], "Temporal Analysis"), unsafe_allow_html=True)
-        
-        st.markdown("<br>", unsafe_allow_html=True)
-        
-        # Build explanation text
-        flagged_by = []
-        if sat['ml_flag']: flagged_by.append("ML")
-        if sat['dm_flag']: flagged_by.append("DM graph")
-        if sat['temporal_flag']: flagged_by.append("Temporal")
-        
-        not_flagged = [m for m in ["ML", "DM graph", "Temporal"] if m not in flagged_by]
-        
-        if sat['anomaly_score'] == 0:
-            explanation = "This satellite received a score of 0 because no method flagged it."
-        elif sat['anomaly_score'] == 3:
-            explanation = "This satellite received a score of 3 because all three methods flagged it."
+        reason_text = "The system flagged this spacecraft due to "
+        if len(reasons) == 1:
+            reason_text += reasons[0] + "."
+        elif len(reasons) == 2:
+            reason_text += reasons[0] + " and " + reasons[1] + "."
         else:
-            flagged_str = " and ".join(flagged_by)
-            if len(not_flagged) == 1:
-                explanation = f"This satellite received a score of {sat['anomaly_score']} because {flagged_str} flagged it, while the {not_flagged[0]} did not."
-            else:
-                not_flagged_str = " and ".join(not_flagged)
-                explanation = f"This satellite received a score of {sat['anomaly_score']} because {flagged_str} flagged it, while {not_flagged_str} did not."
-                
-        st.info(explanation)
+            reason_text += reasons[0] + ", " + reasons[1] + ", and " + reasons[2] + "."
+            
+        st.warning(reason_text)
+        
+    # Expandable technical breakdown
+    with st.expander("View Backend Algorithm Outputs"):
+        st.markdown("This section details the specific triggers from the three independent analysis models.")
+        col1, col2, col3 = st.columns(3)
+        col1.metric("Statistical Model (ML)", "Flagged" if sat['ml_flag'] else "Nominal", 
+                    f"Score: {sat['ml_anomaly_score']:.2f}" if 'ml_anomaly_score' in sat else "")
+        col2.metric("Topology Model (DM)", "Flagged" if sat['dm_flag'] else "Nominal", 
+                    f"In-Degree: {sat['incoming_neighbor_count']}" if 'incoming_neighbor_count' in sat else "")
+        col3.metric("Behavioral Model (Temporal)", "Flagged" if sat['temporal_flag'] else "Nominal", 
+                    f"Δa: {sat['latest_delta_a']:.4f}" if pd.notnull(sat['latest_delta_a']) else "")
+        
 else:
-    st.warning("No satellites match the current filter criteria.")
+    st.info("No spacecraft found matching the criteria.")
