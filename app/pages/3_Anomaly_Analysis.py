@@ -4,35 +4,22 @@ import plotly.express as px
 from data_loader import load_full_data
 
 st.set_page_config(page_title="Anomaly Analysis", layout="wide")
-
 df = load_full_data()
 
-st.title("Anomaly Analysis")
-st.markdown("### Integrated Anomaly Result")
-st.markdown("> The final score is the number of methods that detected unusual behaviour or structure.")
+st.title("System-Wide Anomaly Analysis")
+st.markdown("Detailed breakdown of the integrated results across the catalog.")
 
 counts = df['anomaly_score'].value_counts()
 
-col1, col2, col3, col4 = st.columns(4)
-with col1:
-    st.markdown("#### Score 0")
-    st.markdown("No method flagged the satellite.")
-    st.markdown(f"**{counts.get(0, 0):,}** satellites")
-with col2:
-    st.markdown("#### Score 1")
-    st.markdown("One method flagged the satellite.")
-    st.markdown(f"**{counts.get(1, 0):,}** satellites")
-with col3:
-    st.markdown("#### Score 2")
-    st.markdown("Two methods flagged the satellite.")
-    st.markdown(f"**{counts.get(2, 0):,}** satellites")
-with col4:
-    st.markdown("#### Score 3")
-    st.markdown("All three methods flagged the satellite.")
-    st.markdown(f"**{counts.get(3, 0):,}** satellites")
-    
+c1, c2, c3, c4 = st.columns(4)
+c1.metric("Score 0 (Nominal)", f"{counts.get(0, 0):,}")
+c2.metric("Score 1 (Low Warning)", f"{counts.get(1, 0):,}")
+c3.metric("Score 2 (High Warning)", f"{counts.get(2, 0):,}")
+c4.metric("Score 3 (Critical)", f"{counts.get(3, 0):,}")
+
 st.markdown("---")
 st.markdown("### Score Combination Analysis")
+st.markdown("The final score is the number of methods that detected unusual behaviour or structure. Understanding which combinations triggered the score is critical for operational awareness.")
 
 anomalous = df[df['anomaly_score'] > 0].copy()
 def get_combo(row):
@@ -44,12 +31,17 @@ def get_combo(row):
     
 anomalous['Combination'] = anomalous.apply(get_combo, axis=1)
 combo_counts = anomalous['Combination'].value_counts().reset_index()
-combo_counts.columns = ['Combination', 'Count']
+combo_counts.columns = ['Trigger Combination', 'Number of Satellites']
 
-c1, c2 = st.columns(2)
-with c1:
+c_table, c_chart = st.columns([1, 1.5])
+with c_table:
     st.dataframe(combo_counts, use_container_width=True, hide_index=True)
-with c2:
-    fig = px.bar(combo_counts, x='Count', y='Combination', orientation='h', title="Methods Flagging Satellites")
-    fig.update_layout(yaxis={'categoryorder':'total ascending'})
+    
+with c_chart:
+    fig = px.bar(combo_counts, x='Number of Satellites', y='Trigger Combination', orientation='h', 
+                 color='Number of Satellites', color_continuous_scale='Reds')
+    fig.update_layout(
+        template="plotly_dark", paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)',
+        yaxis={'categoryorder':'total ascending'}, showlegend=False, coloraxis_showscale=False
+    )
     st.plotly_chart(fig, use_container_width=True)
