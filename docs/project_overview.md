@@ -36,9 +36,9 @@ The system operates on daily snapshots of Two-Line Element (TLE) data provided b
 The ML pipeline identifies satellites that are statistically unusual compared to their peers. 
 
 ### How it works
-If we evaluate the entire catalog at once, almost all Low Earth Orbit (LEO) satellites look normal, and all High Earth Orbit (HEO) satellites look like outliers simply because there are fewer of them. To fix this, we use a two-step approach:
+If we evaluate the entire LEO catalog at once, satellites in densely packed orbital regimes (like mega-constellations) dominate the statistical distribution. This causes satellites in more specialized or sparse LEO orbits to look like outliers simply because there are fewer of them. To fix this, we use a two-step approach:
 
-1. **K-Means Clustering:** We group the catalog into $k$ distinct orbital families (clusters) based on $a, e,$ and $i$. This separates the LEOs, Medium Earth Orbits (MEOs), and Geosynchronous Orbits (GEOs) into their natural groups.
+1. **K-Means Clustering:** We group the catalog into $k$ distinct orbital families (clusters) based on $a, e,$ and $i$. This separates the LEO environment into its natural sub-regimes (e.g., specific constellation shells, polar orbits, equatorial orbits).
 2. **Isolation Forest:** Within each specific cluster, we run an Isolation Forest algorithm. This algorithm builds random decision trees to isolate individual data points. 
 
 ### Scientific Justification
