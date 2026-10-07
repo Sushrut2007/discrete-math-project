@@ -75,20 +75,20 @@ By adding the second rule, we ensure the satellite is both **unpopular** (in-deg
 
 ## 5. Temporal Analysis: Recent Orbital Change
 
-The ML and DM pipelines evaluate a single daily snapshot. The Temporal pipeline evaluates the satellite's history over a 7-day window.
+The ML and DM pipelines evaluate a single daily snapshot. The Temporal pipeline evaluates the satellite's behavior over time using a **Self-History Similarity Graph**.
 
 ### How it works
-Satellites naturally drift due to atmospheric drag, and active satellites frequently perform station-keeping maneuvers. We cannot use a hardcoded threshold (e.g., "flag any satellite that changes altitude by 5 km") because 5 km is a massive maneuver for a GEO satellite but a completely normal daily fluctuation for an experimental LEO satellite.
+Satellites naturally drift due to atmospheric drag, and active satellites frequently perform station-keeping maneuvers. To judge if a satellite's movement is abnormal, we cannot compare it to other satellites. We must compare it to its own recent past.
 
-Instead, we use **self-history similarity**:
-1. We calculate the day-to-day changes (transitions) for each satellite:
+1. We calculate the day-to-day orbital changes (transitions) for each satellite over a historical window:
    $$ \Delta a_t = a_t - a_{t-1} $$
    $$ \Delta e_t = e_t - e_{t-1} $$
-2. We compare the *latest* transition to the satellite's *historical* transitions over the past week.
-3. If the latest transition exceeds the 95th percentile of its own historical changes, we assign the **Temporal Flag** ($F_{Temp} = 1$).
+2. We take the **latest transition** (what the satellite did between yesterday and today) and compare it against **all of its past transitions** using Euclidean distance.
+3. We count how many past transitions are mathematically "similar" (distance $\le \epsilon$) to today's transition. This count acts as the "degree" of similarity.
+4. If the similarity count is **0 or 1**, it means today's orbital shift looks nothing like anything the satellite has done recently. The system assigns the **Temporal Flag** ($F_{Temp} = 1$).
 
 ### Scientific Justification
-By making the satellite its own baseline, the algorithm adapts to the specific physics of that object. It ignores routine, expected drift and only triggers when a satellite does something highly unusual compared to its own recent behavior. While this flag does not definitively prove a thruster fired, it effectively highlights sudden orbital shifts.
+This is essentially a temporal extension of the Discrete Mathematics graph, but instead of connecting a satellite to its neighbors, **the satellite connects to its own past selves**. By making the satellite its own baseline, the algorithm adapts to the specific physics of that object. It ignores routine, expected drift and only triggers when a satellite suddenly breaks its own established behavioral pattern.
 
 ---
 
