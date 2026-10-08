@@ -62,7 +62,7 @@ This component uses Discrete Mathematics to map the exact structural relationshi
 ### DM Concepts & How We Use Them:
 *   **Sets & Elements:** In DM, a Set ($S$) is a collection of objects. Here, our universal set is the catalog of 16,000 satellites. Each individual satellite is an element ($x \in S$).
 *   **Binary Relations:** A relation defines how elements in a set connect to each other. We define a relationship based on mathematical distance. 
-*   **Directed Graph (Digraph):** We visually map this relation as a Digraph $G = (V, E)$, where the satellites are the Vertices ($V$). We calculate the Euclidean distance between every satellite's features. Then, every satellite draws a one-way directed Edge ($E$) to the 5 other satellites that have the most identical orbit shape.
+*   **Directed k-Nearest Neighbor (k-NN) Graph:** We map this relation as a Digraph $G = (V, E)$, where the satellites are the Vertices ($V$). We calculate the Euclidean distance between every satellite's features. Then, using a k-NN approach (with $k=5$), every satellite draws a one-way directed Edge ($E$) to its 5 closest mathematical neighbors. Because it is a directed graph, relationships are asymmetric: Satellite A might point to B, but B doesn't have to point back to A.
 
 ### The Flagging Rule (Producing the Score):
 We evaluate two specific graph properties for a satellite $v$:
