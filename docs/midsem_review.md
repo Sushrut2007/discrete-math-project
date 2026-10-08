@@ -67,12 +67,12 @@ This component uses Discrete Mathematics to map the exact structural relationshi
 ### The Flagging Rule (Producing the Score):
 We evaluate two specific graph properties for a satellite $v$:
 1.  **Node In-Degree ($\text{deg}^-(v)$):** The number of incoming arrows pointing *at* the satellite.
-2.  **Mean Outward Distance ($\text{mean\_dist}(v)$):** The average length of the 5 arrows the satellite points outward.
+2.  **Mean Outward Distance ($\text{mean\_dist}(v)$):** The average length of the 5 arrows the satellite points outward. If this number is small, the satellite is sitting right next to a cluster. If it is large, the satellite is floating out in the middle of nowhere, and even its "closest" neighbors are actually extremely far away.
 
 The logic outputs a `1` (Anomaly) **only if both** conditions are met:
 $$ \text{deg}^-(v) = 0 \quad \textbf{AND} \quad \text{mean\_dist}(v) > \mu_{\text{global\_dist}} $$
 
-*Why both?* If we only looked for an In-Degree of 0, we might accidentally flag perfectly normal satellites that are just sitting on the outer edge of a massive Starlink cluster (Starlinks only point at the center of the cluster, ignoring the edge). By adding the second condition, we mathematically prove the satellite is a true "structural loner"—nobody points at it, AND it is extremely far away from its own closest neighbors.
+*Why both?* If a satellite has an In-Degree of 0, but its mean outward distance is tiny, it just means it is sitting on the absolute edge of a dense Starlink cluster (the Starlinks all point at each other inside the cluster, ignoring the edge). We only flag it if nobody points at it **AND** its mean outward distance is large, mathematically proving it is truly isolated in space.
 
 ---
 
