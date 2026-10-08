@@ -82,6 +82,8 @@ Components 1 and 2 evaluate a single snapshot in time. Component 3 evaluates a s
 
 ### DM Concepts & How We Use Them:
 *   **Sets & Elements:** Here, the set is NOT the satellites. The set is the 7-day history of a *single* satellite. The elements are the daily changes in its orbit, which we call transitions ($T_k = [\Delta a, \Delta e, \Delta i]$).
+    *   *What is a transition?* A satellite doesn't stay perfectly still; its orbit naturally decays a tiny bit every day due to Earth's atmospheric drag. A "transition" is simply the math of how much it moved between yesterday and today.
+    *   *How we evaluate it:* By comparing today's transition to last week's transitions, we aren't asking "did the satellite move?" (because they all move). We are asking, "did the satellite move exactly like it normally does?" If a dead satellite normally drops 10 meters a day, and today it drops 10 meters, that is mathematically similar to its history. But if today it suddenly climbs 500 meters, that is a completely new transition.
 *   **Tolerance Relation ($\sim$):** We define a relation to connect two days if their orbital changes were mathematically similar (distance $\le \epsilon$). In DM, this is called a Tolerance Relation because it is **reflexive** (a day is perfectly similar to itself) and **symmetric** (if Monday is similar to Tuesday, Tuesday is similar to Monday).
 *   **Undirected Graph:** Because the relation is symmetric, we build an undirected graph connecting the days where the satellite behaved similarly.
 
