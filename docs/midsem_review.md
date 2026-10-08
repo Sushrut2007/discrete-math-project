@@ -1,20 +1,20 @@
 # Project Review: Satellite Anomaly Detection Using Machine Learning and Discrete Mathematics
 
-## 1. Project Goal and The Problem Space
+## 1. The Problem Space (Why we are doing this)
 
-As Low Earth Orbit (LEO) becomes increasingly crowded with mega-constellations, dead payloads, and debris, space situational awareness is critical. Traditional tracking systems rely purely on physics: they project a satellite's path and calculate if it will collide with something.
+Low Earth Orbit (LEO) is getting dangerously crowded. If we aren't careful, we risk triggering **Kessler Syndrome**—a theoretical scenario where a single collision creates a cloud of debris, which hits other satellites, creating an unstoppable cascade of destruction that could make space completely unusable.
 
-However, physical collision prediction is not anomaly detection. If a satellite suffers a hardware failure and starts tumbling into a strange orbit, or if an experimental satellite executes an unannounced thruster burn, standard collision systems struggle to simply ask: *"Is this satellite behaving normally?"*
+Right now, standard systems try to prevent this by using physics to predict direct collisions. But that's not enough. We want to catch satellites *before* they become a collision risk. We need to find **anomalies**. 
 
-Our project aims to solve this by building a triage system. We filter the 16,000+ objects in orbit down to the absolute most interesting anomalies by evaluating them structurally, statistically, and behaviorally.
+To us, an "anomaly" simply means a satellite that is behaving weirdly. Maybe a dead satellite is tumbling into a strange orbit, or a military satellite is quietly firing thrusters to change its path.
 
-### The Core Features
+### The 3 Core Features
 We don't track X, Y, Z spatial coordinates. We track the **shape** of the orbit using three classical elements:
 1.  **Semi-major axis ($a$):** The size/average altitude of the orbit.
 2.  **Eccentricity ($e$):** How circular or oval-shaped the orbit is.
 3.  **Inclination ($i$):** The tilt of the orbit relative to the equator.
 
-**Crucial Step - Standardization:** Because altitude is measured in thousands of kilometers and eccentricity is a decimal between 0 and 1, we cannot do math on them directly. We use z-scores to standardize these features into a common scale ($std\_a$, $std\_e$, $std\_i$).
+**Crucial Step - Standardization:** Because altitude is measured in thousands of kilometers and eccentricity is a tiny decimal, we cannot do math on them directly. We use z-scores to standardize these features into a common scale ($std\_a$, $std\_e$, $std\_i$).
 
 ---
 
@@ -47,32 +47,32 @@ flowchart TD
 
 ## 3. Component 1: Machine Learning (The Statistical Check)
 
-The first component relies on statistical density to find satellites that do not fit in with their peers.
+This component uses statistical density to find satellites that do not fit in with their peers.
 
-*   **Step 1: K-Means Clustering:** We cannot compare a high-altitude weather satellite to a low-altitude Starlink. K-Means clustering divides the catalog into distinct orbital families based on their features.
-*   **Step 2: Isolation Forest:** Within each specific family, we run an Isolation Forest algorithm. This builds random decision trees to partition the data. If a satellite is sitting in a sparse, low-density region of the cluster, it requires very few tree splits to isolate it.
-*   **The Result:** If the algorithm isolates the satellite easily, it receives the ML Anomaly Flag ($F_{ML} = 1$). 
+*   **Step 1 (K-Means Clustering):** We cannot compare a high-altitude weather satellite to a low-altitude Starlink. K-Means divides the entire catalog into distinct orbital families based on their features.
+*   **Step 2 (Isolation Forest):** Within each specific family, we run an Isolation Forest algorithm. If a satellite is sitting in a sparse, empty region on the edge of the cluster, the algorithm easily isolates it.
+*   **The Result:** If the algorithm isolates the satellite easily, it outputs an anomaly flag of `1`. Otherwise, `0`. 
 
 ---
 
 ## 4. Component 2: The Orbital Similarity Graph (Static DM)
 
-While the ML check looks at density, the second check uses **Discrete Mathematics** to map the exact structural relationships between satellites. We build a massive mathematical graph representing the "social network" of orbits.
+This component uses Discrete Mathematics to map the exact structural relationships between satellites. We build a massive mathematical graph representing the "social network" of orbits.
 
-### DM Concepts Used:
-*   **Directed Graph (Digraph):** A graph $G = (V, E)$ where edges have a one-way direction. 
-*   **Node In-Degree:** The number of edges pointing *at* a node ($\text{deg}^-(v)$).
+### DM Concepts & How We Use Them:
+*   **Sets & Elements:** In DM, a Set ($S$) is a collection of objects. Here, our universal set is the catalog of 16,000 satellites. Each individual satellite is an element ($x \in S$).
+*   **Binary Relations:** A relation defines how elements in a set connect to each other. We define a relationship based on mathematical distance. 
+*   **Directed Graph (Digraph):** We visually map this relation as a Digraph $G = (V, E)$, where the satellites are the Vertices ($V$). We calculate the Euclidean distance between every satellite's features. Then, every satellite draws a one-way directed Edge ($E$) to the 5 other satellites that have the most identical orbit shape.
 
-### The Implementation & Math:
-1.  **Nodes ($V$):** Every satellite in the catalog is a node.
-2.  **Distance Metric:** We calculate the 3-dimensional Euclidean distance between the standardized features of Satellite 1 and Satellite 2:
-    $$ D = \sqrt{(std\_a_1 - std\_a_2)^2 + (std\_e_1 - std\_e_2)^2 + (std\_i_1 - std\_i_2)^2} $$
-3.  **Edges ($E$):** We construct a directed k-Nearest Neighbor (k-NN) graph. Every satellite draws a directed edge to the 5 nodes with the smallest distance $D$. Because it is a digraph, relationships are asymmetric (A points to B, but B might point to C).
-4.  **The Flagging Rule:** We flag a satellite $v$ if it satisfies **both** of these structural conditions:
-    *   Condition 1: **$\text{deg}^-(v) = 0$** (Nobody points to this satellite).
-    *   Condition 2: **$\text{mean\_dist}(v) > \mu_{\text{global\_dist}}$** (The 5 satellites it points to are actually very far away, mathematically speaking).
+### The Flagging Rule (Producing the Score):
+We evaluate two specific graph properties for a satellite $v$:
+1.  **Node In-Degree ($\text{deg}^-(v)$):** The number of incoming arrows pointing *at* the satellite.
+2.  **Mean Outward Distance ($\text{mean\_dist}(v)$):** The average length of the 5 arrows the satellite points outward.
 
-*Why both conditions?* If we only looked for an In-Degree of 0, we might accidentally flag normal satellites sitting perfectly on the edge of a dense Starlink cluster. The second condition guarantees the satellite is a true "structural loner"—ignored by everyone, and far away from its own closest neighbors.
+The logic outputs a `1` (Anomaly) **only if both** conditions are met:
+$$ \text{deg}^-(v) = 0 \quad \textbf{AND} \quad \text{mean\_dist}(v) > \mu_{\text{global\_dist}} $$
+
+*Why both?* If we only looked for an In-Degree of 0, we might accidentally flag perfectly normal satellites that are just sitting on the outer edge of a massive Starlink cluster (Starlinks only point at the center of the cluster, ignoring the edge). By adding the second condition, we mathematically prove the satellite is a true "structural loner"—nobody points at it, AND it is extremely far away from its own closest neighbors.
 
 ---
 
@@ -80,19 +80,18 @@ While the ML check looks at density, the second check uses **Discrete Mathematic
 
 Components 1 and 2 evaluate a single snapshot in time. Component 3 evaluates a satellite's behavior over a 7-day window. It completely ignores the rest of the catalog and compares the satellite exclusively to its own past.
 
-### DM Concepts Used:
-*   **Tolerance Relation ($\sim$):** A binary relation that connects two elements if they are mathematically similar. It is reflexive ($x \sim x$) and symmetric ($x \sim y \implies y \sim x$), but not transitive.
-*   **Node Degree:** The total number of edges connected to a node in an undirected graph.
+### DM Concepts & How We Use Them:
+*   **Sets & Elements:** Here, the set is NOT the satellites. The set is the 7-day history of a *single* satellite. The elements are the daily changes in its orbit, which we call transitions ($T_k = [\Delta a, \Delta e, \Delta i]$).
+*   **Tolerance Relation ($\sim$):** We define a relation to connect two days if their orbital changes were mathematically similar (distance $\le \epsilon$). In DM, this is called a Tolerance Relation because it is **reflexive** (a day is perfectly similar to itself) and **symmetric** (if Monday is similar to Tuesday, Tuesday is similar to Monday).
+*   **Undirected Graph:** Because the relation is symmetric, we build an undirected graph connecting the days where the satellite behaved similarly.
 
-### The Implementation & Math:
-1.  **Nodes:** We track the daily changes (transitions) for a single satellite over a week. Each daily transition vector $T$ is a Node.
-    $$ T_k = [ \Delta a, \Delta e, \Delta i ] $$
-2.  **The Relation:** We take today's transition ($T_{\text{latest}}$) and compare it against all historical transitions ($T_k$). We define them as related (we draw an undirected edge between them) if their Euclidean distance is less than a strict similarity threshold $\epsilon$:
-    $$ T_{\text{latest}} \sim T_k \iff \text{Distance}(T_{\text{latest}}, T_k) \le \epsilon $$
-3.  **The Flagging Rule:** We evaluate the **Node Degree** of today's transition, denoted as $\text{deg}(T_{\text{latest}})$, which is the count of how many past days were mathematically similar to today. We flag today's movement if:
-    $$ \text{deg}(T_{\text{latest}}) \le 1 $$
-    
-*What this means:* If the degree is $\le 1$, today's orbital shift does not connect to the satellite's established history. The satellite just shifted its orbit in a completely unprecedented way, triggering the behavioral alarm.
+### The Flagging Rule (Producing the Score):
+We look at today's transition ($T_{\text{latest}}$). We want to know how many past days it is connected to. In DM, this count is the **Node Degree**, denoted as $\text{deg}(T_{\text{latest}})$.
+
+The logic outputs a `1` (Anomaly) if:
+$$ \text{deg}(T_{\text{latest}}) \le 1 $$
+
+*What this means:* If the degree is 0 or 1, today's orbital shift has almost zero connection to the satellite's established history. The satellite just shifted its orbit in a completely unprecedented way, triggering the behavioral alarm.
 
 ---
 
