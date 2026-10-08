@@ -24,23 +24,17 @@ The pipeline runs on daily data snapshots from CelesTrak. Every satellite passes
 
 ```mermaid
 flowchart TD
-    %% Styling
-    classDef raw fill:#2d3436,stroke:#b2bec3,color:#dfe6e9
-    classDef process fill:#0984e3,stroke:#74b9ff,color:#fff
-    classDef check fill:#6c5ce7,stroke:#a29bfe,color:#fff
-    classDef final fill:#d63031,stroke:#ff7675,color:#fff
-
-    A[Raw CelesTrak Data \n 16,000+ Satellites]:::raw --> B(Extract & Standardize \n a, e, i):::process
+    A[Raw CelesTrak Data: 16,000+ Satellites] --> B[Extract & Standardize: a, e, i]
     
-    B --> C{1. Machine Learning \n Statistical Check}:::check
-    B --> D{2. Static DM \n Structural Graph}:::check
-    B --> E{3. Temporal DM \n Self-History Graph}:::check
+    B --> C[1. Machine Learning: Statistical Check]
+    B --> D[2. Static DM: Structural Graph]
+    B --> E[3. Temporal DM: Self-History Graph]
     
-    C -- "Flag (0 or 1)" --> F[Integration: Evidence Tally]:::process
-    D -- "Flag (0 or 1)" --> F
-    E -- "Flag (0 or 1)" --> F
+    C -->|Flag 0 or 1| F[Integration: Final Tally]
+    D -->|Flag 0 or 1| F
+    E -->|Flag 0 or 1| F
     
-    F --> G(((Final Anomaly Score \n 0 to 3))):::final
+    F --> G[Final Anomaly Score: 0 to 3]
 ```
 
 ---
