@@ -97,14 +97,14 @@ $$ \text{deg}(T_{\text{latest}}) \le 1 $$
 
 ---
 
-## 6. Integration: The Final Evidence Tally
+## 6. Integration: The Final Score
 
-We integrate the three pipelines using a simple tally system:
+Since no algorithm is perfect, we don't rely on just one. We just add the three flags together to get a final score:
 $$ \text{Final Score} = F_{\text{ML}} + F_{\text{DM}} + F_{\text{Temp}} $$
 
-*   **Score 0:** Nominal behavior.
-*   **Score 1:** Low Warning. A single mathematical lens detected a discrepancy.
-*   **Score 2:** High Warning. Two independent mathematical checks agree.
-*   **Score 3:** Critical Anomaly. Unanimous consensus. The satellite is statistically unusual, structurally isolated in the graph, and actively changing its orbit.
+*   **Score 0:** Everything is completely normal.
+*   **Score 1:** Only one check found an issue. Usually just a minor data glitch or routine drift.
+*   **Score 2:** Two different checks agree something is weird. This is worth a closer look.
+*   **Score 3:** All three checks flagged the satellite. It is sitting in a weird part of space, nobody is near it, and it just suddenly changed its path. 
 
-By cross-verifying density (ML), topology (Static DM), and history (Temporal DM), we drastically reduce false positives. A perfectly normal satellite will not accidentally trigger all three completely different equations simultaneously.
+The main reason we do this is to get rid of false alarms. A normal satellite might accidentally fail one math check, but it is basically impossible for a normal satellite to accidentally fail all three different equations at the exact same time.
