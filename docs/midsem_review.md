@@ -63,11 +63,14 @@ While the ML check looks at general statistics, the second check uses **Discrete
 *   **Directed Graph (Digraph):** A network where connections are one-way arrows. 
 *   **Node In-Degree:** The number of arrows pointing *at* a specific item in the network.
 
-### How we implemented it:
-1.  **Building the Network:** We treat every satellite as a Node. We force every satellite to draw a directed arrow pointing to the 5 other satellites that have the most identical orbit shape (using Euclidean distance).
-2.  **Asymmetric Relations:** Because it is a Directed Graph, the arrows are one-way. Satellite A might point at Satellite B, but Satellite B is allowed to point at someone else.
-3.  **The Flagging Rule:** We flag any satellite that has an **In-Degree of 0**. 
-    *   *What does this mean?* It means that out of all 16,000 satellites in space, zero satellites pointed an arrow back at this one. It mathematically proves the satellite is a structural loner with a highly unusual orbit.
+### How we implemented it (The Math):
+1.  **Building the Network:** The satellite catalog forms a Graph $G = (V, E)$, where the Vertices ($V$) are the individual satellites.
+2.  **Distance Calculation:** To find the 5 most similar neighbors, we calculate the 3-dimensional Euclidean distance between Satellite 1 and Satellite 2:
+    $$ D = \sqrt{(a_1 - a_2)^2 + (e_1 - e_2)^2 + (i_1 - i_2)^2} $$
+3.  **Drawing Edges ($E$):** Every satellite draws a directed edge to the 5 nodes with the smallest distance $D$. Because it is a Digraph, Satellite A might point to B, but B does not have to point back to A.
+4.  **The Flagging Rule:** We evaluate the incoming connections to a specific satellite $v$, mathematically denoted as $\text{deg}^-(v)$. We flag the satellite if its in-degree is zero:
+    $$ \text{deg}^-(v) = 0 $$
+    *What does this mean?* It mathematically proves that out of 16,000 objects, zero satellites consider this one a close neighbor. It is a structural loner.
 
 ---
 
@@ -79,10 +82,14 @@ The first two components look at a snapshot of a single day. The third component
 *   **Tolerance Relation:** A mathematical rule that connects two things if they are "similar enough." In Discrete Math, a tolerance relation is reflexive (a thing is perfectly similar to itself) and symmetric (if A is similar to B, B is similar to A), but it is not transitive.
 *   **Node Degree:** The total number of connections an item has in an undirected graph.
 
-### How we implemented it:
-1.  **Tracking Daily Changes:** Over a 7-day window, we record how much a satellite moves every single day (e.g., the change in altitude between Monday and Tuesday). We treat each day's mathematical movement as a Node.
-2.  **Applying the Relation:** We take *today's* movement and compare it to the satellite's past movements over the week. If today's math is close to a past day's math (the Euclidean distance is $\le$ threshold), the Tolerance Relation is satisfied, and we draw an edge connecting them.
-3.  **The Flagging Rule:** We check the **Node Degree** of today's movement. If the degree is $0$ or $1$, it means today's movement does not connect to the satellite's normal history. The satellite just shifted its orbit in a way it hasn't done all week, so we flag it.
+### How we implemented it (The Math):
+1.  **Tracking Daily Changes:** Over a 7-day window, we record the daily changes for a single satellite. We treat each daily transition ($T$) as a Node.
+    $$ T_k = [ \Delta a, \Delta e, \Delta i ] $$
+2.  **The Tolerance Relation ($\sim$):** We compare today's transition ($T_{\text{today}}$) to a past transition ($T_{\text{past}}$). We define them as "related" (drawn with an edge) if the Euclidean distance between them is less than or equal to a strict mathematical threshold $\epsilon$:
+    $$ T_{\text{today}} \sim T_{\text{past}} \iff \text{Distance}(T_{\text{today}}, T_{\text{past}}) \le \epsilon $$
+3.  **The Flagging Rule:** We count the **Node Degree**, denoted as $\text{deg}(v)$, which is simply the number of past days that satisfied the relation above. We flag today's movement if:
+    $$ \text{deg}(v) \le 1 $$
+    *What does this mean?* It proves today's orbital shift does not connect to the satellite's normal history. The satellite just shifted its orbit in a way it hasn't done all week.
 
 ---
 
