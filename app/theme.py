@@ -152,24 +152,24 @@ def get_badge_html(score: int) -> str:
 def render_sidebar(df):
     with st.sidebar:
         st.markdown("### Satellite Anomaly Detection")
-        st.caption("Discrete Mathematics & Machine Learning")
+        st.caption("Low Earth Orbit (LEO)")
         
         st.markdown(f"""
         <div style="background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.08); padding: 10px 14px; border-radius: 8px; margin-bottom: 16px;">
-            <div style="font-size: 0.75rem; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.05em;">Catalog Size</div>
+            <div style="font-size: 0.75rem; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.05em;">Total Satellites</div>
             <div style="font-size: 1.1rem; font-weight: 600; color: #f8fafc; margin-top: 2px;">
-                <span class="status-dot"></span>{len(df):,} Satellites
+                <span class="status-dot"></span>{len(df):,} LEO Objects
             </div>
-            <div style="font-size: 0.75rem; color: #64748b; margin-top: 4px;">Data source: CelesTrak active satellites</div>
+            <div style="font-size: 0.75rem; color: #64748b; margin-top: 4px;">Data: CelesTrak active catalog</div>
         </div>
         """, unsafe_allow_html=True)
         
         st.markdown("---")
-        st.markdown("#### Detection Components")
+        st.markdown("#### How it works")
         st.markdown("""
-        - **ML Component:** K-Means clustering + Isolation Forest
-        - **DM Component:** Directed 5-NN graph + In-degree zero rule
-        - **Final Score:** Sum of flags (0, 1, or 2)
+        - **Machine Learning:** Groups satellites by orbit and flags outliers with Isolation Forest.
+        - **Discrete Math:** Builds a 5-nearest-neighbor graph to spot isolated satellites.
+        - **Final Score:** 0, 1, or 2 based on how many methods flagged it.
         """)
         
         st.markdown("---")
