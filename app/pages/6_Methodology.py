@@ -14,8 +14,8 @@ df = load_full_data()
 render_sidebar(df)
 
 # Header
-st.markdown('<div class="page-title">Methodology & System Architecture</div>', unsafe_allow_html=True)
-st.markdown('<div class="page-subtitle">Formal mathematical framework, pipeline architecture, and analytical limitations.</div>', unsafe_allow_html=True)
+st.markdown('<div class="page-title">Methodology & Architecture</div>', unsafe_allow_html=True)
+st.markdown('<div class="page-subtitle">Formulas, pipeline steps, and project limitations.</div>', unsafe_allow_html=True)
 st.markdown('<div class="accent-bar"></div>', unsafe_allow_html=True)
 
 # Architecture Diagram
@@ -26,24 +26,24 @@ st.markdown("""
 
 st.mermaid("""
 graph TD
-    A["Raw CelesTrak TLE Catalog<br>(16,000+ Active Objects)"] --> B["Orbital Feature Engineering<br>(a, e, i, period, speed, height)"]
+    A["Raw CelesTrak TLE Data<br>(16,000+ Active Satellites)"] --> B["Orbital Feature Calculation<br>(period, speed, height, semi-major axis)"]
     B --> C["Standardized 6D Feature Space"]
     
     C --> D["Branch 1: Machine Learning"]
     C --> E["Branch 2: Discrete Mathematics"]
     
-    D --> D1["K-Means Clustering<br>(Orbital Families)"]
-    D1 --> D2["Intra-Cluster Isolation Forest<br>(Recursive Tree Partitioning)"]
-    D2 --> D3["ML Flag: F_ML ∈ {0, 1}"]
+    D --> D1["K-Means Clustering<br>(Orbital Groups)"]
+    D1 --> D2["Isolation Forest<br>(Within each cluster)"]
+    D2 --> D3["ML Flag: 0 or 1"]
     
-    E --> E1["Directed k-NN Graph G = (V, E)<br>(k = 5 Out-Degree)"]
-    E1 --> E2["Topological Analysis<br>(In-Degree & Mean Distance)"]
-    E2 --> E3["DM Flag: F_DM ∈ {0, 1}"]
+    E --> E1["Directed 5-NN Graph<br>(5 arrows per node)"]
+    E1 --> E2["Graph Checks<br>(In-degree = 0 & Distance > mean)"]
+    E2 --> E3["DM Flag: 0 or 1"]
     
-    D3 --> F["Score Integration: Score = F_ML + F_DM ∈ {0, 1, 2}"]
+    D3 --> F["Final Score = ML Flag + DM Flag (0, 1, or 2)"]
     E3 --> F
     
-    F --> G["Mission Dashboard & Deep-Dive Explorer"]
+    F --> G["Streamlit Web App"]
     
     style A fill:#1e293b,stroke:#475569,stroke-width:1px,color:#f8fafc
     style B fill:#1e293b,stroke:#475569,stroke-width:1px,color:#f8fafc
@@ -57,72 +57,72 @@ graph TD
 st.markdown("</div>", unsafe_allow_html=True)
 
 # Mathematical Framework
-st.markdown("### Formal Mathematical Framework")
+st.markdown("### Mathematical Formulations")
 
 col_m1, col_m2 = st.columns(2)
 
 with col_m1:
     st.markdown("""
-    #### 1. Machine Learning Formulation
+    #### 1. Machine Learning Component
     
-    Each satellite is mapped to a standardized orbital feature vector:
+    Each satellite has a normalized feature vector:
     $$\\mathbf{x} = [a, e, i, T, v_{\\text{orb}}, h] \\in \\mathbb{R}^6$$
     
-    **Stage 1: K-Means Clustering**  
-    Partitions the catalog $V$ into $K$ disjoint orbital clusters $S = \\{S_1, S_2, \\dots, S_K\\}$ minimizing within-cluster variance:
+    **Step 1: K-Means Clustering**  
+    Splits satellites into $K$ orbital clusters $S_k$ by minimizing squared distances:
     $$\\arg\\min_S \\sum_{k=1}^K \\sum_{\\mathbf{x} \\in S_k} \\|\\mathbf{x} - \\boldsymbol{\\mu}_k\\|^2$$
     
-    **Stage 2: Intra-Cluster Isolation Forest**  
-    Within each cluster $S_k$, an ensemble of $T$ isolation trees recursively isolates samples. The anomaly score is defined as:
-    $$s(\\mathbf{x}, |S_k|) = 2^{-\\frac{E(h(\\mathbf{x}))}{c(|S_k|)}}$$
-    where $E(h(\\mathbf{x}))$ is the average path length and $c(n)$ is the average path length of unsuccessful searches in BSTs.
+    **Step 2: Intra-Cluster Isolation Forest**  
+    Inside each cluster, isolation trees recursively split features. The anomaly score is:
+    $$s(\\mathbf{x}) = 2^{-\\frac{E(h(\\mathbf{x}))}{c(n)}}$$
+    where $E(h(\\mathbf{x}))$ is average tree depth to isolate $\\mathbf{x}$, and $c(n)$ is the average depth of an unsuccessful search in a BST.
     
-    $$F_{\\text{ML}}(\\mathbf{x}) = \\begin{cases} 1 & \\text{if } s(\\mathbf{x}) \\text{ exceeds cluster threshold} \\\\ 0 & \\text{otherwise} \\end{cases}$$
+    $$F_{\\text{ML}} = \\begin{cases} 1 & \\text{if score is below cluster threshold} \\\\ 0 & \\text{otherwise} \\end{cases}$$
     """)
 
 with col_m2:
     st.markdown("""
-    #### 2. Discrete Mathematics Graph Formulation
+    #### 2. Discrete Mathematics Graph Component
     
-    Let $V$ represent the set of satellites ($|V| = 16,612$). We construct a directed graph $G = (V, E)$.
+    We build a directed graph $G = (V, E)$ where vertices $V$ are satellites ($|V| = 16,612$).
     
-    **Directed Edge Set:**  
-    An edge $(u, v) \\in E$ exists if and only if $v$ is among the $k=5$ nearest neighbors of $u$ in standardized Euclidean orbital space:
-    $$E = \\{(u, v) \\in V \\times V : v \\in N_k(u)\\}$$
-    Each vertex has out-degree exactly $d^+(u) = k = 5$.
+    **Directed Edges:**  
+    An edge $(u, v) \\in E$ means satellite $v$ is among the $k=5$ nearest neighbors of $u$ in standardized orbital feature space:
+    $$E = \\{(u, v) \\in V \\times V : v \\in N_5(u)\\}$$
+    Each node has out-degree exactly $d^+(u) = 5$.
     
-    **In-Degree & Distance:**  
-    The in-degree $d^-(v)$ counts how many satellites select $v$ as a nearest neighbor:
+    **In-Degree & Mean Distance:**  
+    In-degree $d^-(v)$ is how many satellites point to $v$:
     $$d^-(v) = |\\{u \\in V : (u, v) \\in E\\}|$$
     The mean neighbor distance is:
-    $$\\bar{d}(v) = \\frac{1}{k} \\sum_{w \\in N_k(v)} \\|\\mathbf{x}_v - \\mathbf{x}_w\\|$$
+    $$\\bar{d}(v) = \\frac{1}{5} \\sum_{w \\in N_5(v)} \\|\\mathbf{x}_v - \\mathbf{x}_w\\|$$
     
-    **Topological Isolation Flag:**
-    $$F_{\\text{DM}}(v) = \\begin{cases} 1 & \\text{if } d^-(v) = 0 \\;\\land\\; \\bar{d}(v) > \\mu_{\\text{global}} \\\\ 0 & \\text{otherwise} \\end{cases}$$
+    **DM Flag Rule:**
+    $$F_{\\text{DM}} = \\begin{cases} 1 & \\text{if } d^-(v) = 0 \\;\\land\\; \\bar{d}(v) > \\mu_{\\text{global}} \\\\ 0 & \\text{otherwise} \\end{cases}$$
     """)
 
 st.markdown("---")
 
 # Synthesis and Limitations
-st.markdown("### Integration Model & Engineering Disclosures")
+st.markdown("### Scoring and Project Limitations")
 
 c_int, c_lim = st.columns(2)
 
 with c_int:
     st.markdown("""
-    #### Additive Integration Model
-    The combined anomaly priority score is the sum of concordant indicators:
-    $$\\text{Score}(v) = F_{\\text{ML}}(v) + F_{\\text{DM}}(v) \\in \\{0, 1, 2\\}$$
+    #### Final Score Formula
+    The integration score is just the sum of the flags:
+    $$\\text{Score} = F_{\\text{ML}} + F_{\\text{DM}} \\in \\{0, 1, 2\\}$$
     
-    - **Score 0:** Neither model flagged the object. Standard nominal trajectory.
-    - **Score 1:** Flagged by either ML (density outlier) or DM (graph isolation). Added to moderate review queue.
-    - **Score 2:** Flagged concurrently by both models. Highest priority for radar tasking and manual ephemeris inspection.
+    - **Score 0:** Neither method flagged the satellite (Normal).
+    - **Score 1:** Flagged by one method (Worth checking).
+    - **Score 2:** Flagged by both methods (Highest priority for review).
     """)
 
 with c_lim:
     st.markdown("""
-    #### Scope Limitations & Scientific Boundaries
-    - **Evidence Tally, Not Probability:** The score represents the count of methods that detected atypical orbital properties. It is **not** a probability of collision or failure.
-    - **Orbital Parameter Space:** The DM graph models topological similarity in standardized parameter space, **not** instantaneous physical distance between satellites in orbit.
-    - **Feature Overlap:** ML and DM share fundamental orbital elements ($a, e, i$). Therefore, they are described as **complementary lenses**, not purely independent random variables.
+    #### Important Limitations
+    - **Not a danger rating:** The score is a count of methods that found the satellite unusual. It is **not** a probability of collision or failure.
+    - **Orbital similarity vs. physical space:** The graph connects satellites with similar orbital parameters, **not** satellites that are currently close to each other in physical space.
+    - **Shared features:** ML and DM use some of the same orbital features ($a, e, i$), so they are complementary checks, not completely independent tests.
     """)

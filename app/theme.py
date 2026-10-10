@@ -1,6 +1,5 @@
 import streamlit as st
 import plotly.graph_objects as go
-from datetime import datetime
 
 CUSTOM_CSS = """
 <style>
@@ -14,25 +13,19 @@ CUSTOM_CSS = """
         font-family: 'JetBrains Mono', monospace !important;
     }
     
-    /* Main container clean spacing */
     .block-container {
         padding-top: 1.8rem;
         padding-bottom: 2.5rem;
         max-width: 1300px;
     }
     
-    /* Card Container */
     .metric-card {
         background: linear-gradient(145deg, #131b2e 0%, #0d1322 100%);
         border: 1px solid rgba(255, 255, 255, 0.08);
         border-radius: 10px;
         padding: 16px 20px;
         box-shadow: 0 4px 20px rgba(0, 0, 0, 0.25);
-        transition: transform 0.15s ease, border-color 0.15s ease;
         margin-bottom: 12px;
-    }
-    .metric-card:hover {
-        border-color: rgba(99, 102, 241, 0.4);
     }
     
     .metric-value {
@@ -58,7 +51,6 @@ CUSTOM_CSS = """
         margin-top: 6px;
     }
     
-    /* Score Pills */
     .score-badge {
         display: inline-flex;
         align-items: center;
@@ -85,7 +77,6 @@ CUSTOM_CSS = """
         border: 1px solid rgba(239, 68, 68, 0.45);
     }
     
-    /* Section headers */
     .page-title {
         font-size: 1.85rem;
         font-weight: 700;
@@ -99,7 +90,6 @@ CUSTOM_CSS = """
         margin-bottom: 1.4rem;
     }
     
-    /* Accent glow line */
     .accent-bar {
         height: 2px;
         width: 48px;
@@ -108,7 +98,6 @@ CUSTOM_CSS = """
         margin-bottom: 1rem;
     }
 
-    /* Side-by-side Evidence Panels */
     .evidence-panel {
         background: #0f172a;
         border: 1px solid rgba(255, 255, 255, 0.08);
@@ -127,7 +116,6 @@ CUSTOM_CSS = """
         border-bottom: 1px solid rgba(255, 255, 255, 0.06);
     }
     
-    /* Pulse status dot */
     .status-dot {
         display: inline-block;
         width: 8px;
@@ -141,11 +129,9 @@ CUSTOM_CSS = """
 """
 
 def apply_theme():
-    """Applies clean, unified dark mode styling across pages."""
     st.markdown(CUSTOM_CSS, unsafe_allow_html=True)
 
 def render_metric_card(label: str, value: str, subtext: str = "", color: str = "#f1f5f9", border_color: str = None):
-    """Renders a high-contrast KPI metric card."""
     style_extra = f"border-left: 3px solid {border_color};" if border_color else ""
     st.markdown(f"""
     <div class="metric-card" style="{style_extra}">
@@ -156,45 +142,42 @@ def render_metric_card(label: str, value: str, subtext: str = "", color: str = "
     """, unsafe_allow_html=True)
 
 def get_badge_html(score: int) -> str:
-    """Returns styled HTML badge for score 0, 1, or 2."""
     if score == 0:
-        return '<span class="score-badge score-0">● Score 0 · Routine</span>'
+        return '<span class="score-badge score-0">Score 0 · Normal</span>'
     elif score == 1:
-        return '<span class="score-badge score-1">▲ Score 1 · Single Flag</span>'
+        return '<span class="score-badge score-1">Score 1 · One Flag</span>'
     else:
-        return '<span class="score-badge score-2">◆ Score 2 · Dual Flag (Priority)</span>'
+        return '<span class="score-badge score-2">Score 2 · Both Flagged</span>'
 
 def render_sidebar(df):
-    """Unified sidebar for all pages with project metadata and fast actions."""
     with st.sidebar:
-        st.markdown("### Satellite Anomaly Radar")
-        st.caption("Discrete Math & Machine Learning")
+        st.markdown("### Satellite Anomaly Detection")
+        st.caption("Discrete Mathematics & Machine Learning")
         
         st.markdown(f"""
         <div style="background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.08); padding: 10px 14px; border-radius: 8px; margin-bottom: 16px;">
-            <div style="font-size: 0.75rem; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.05em;">Catalog Status</div>
+            <div style="font-size: 0.75rem; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.05em;">Catalog Size</div>
             <div style="font-size: 1.1rem; font-weight: 600; color: #f8fafc; margin-top: 2px;">
                 <span class="status-dot"></span>{len(df):,} Satellites
             </div>
-            <div style="font-size: 0.75rem; color: #64748b; margin-top: 4px;">Source: CelesTrak Active TLE</div>
+            <div style="font-size: 0.75rem; color: #64748b; margin-top: 4px;">Data source: CelesTrak active satellites</div>
         </div>
         """, unsafe_allow_html=True)
         
         st.markdown("---")
-        st.markdown("#### Detection Models")
+        st.markdown("#### Detection Components")
         st.markdown("""
-        - **ML Component:** K-Means Orbital Families + Intra-cluster Isolation Forest
-        - **DM Component:** Directed 5-NN Similarity Graph with Topological In-degree Zero test
-        - **Scoring:** Additive evidence count (0 to 2)
+        - **ML Component:** K-Means clustering + Isolation Forest
+        - **DM Component:** Directed 5-NN graph + In-degree zero rule
+        - **Final Score:** Sum of flags (0, 1, or 2)
         """)
         
         st.markdown("---")
-        if st.button("Reload Dataset", use_container_width=True):
+        if st.button("Reload Data", use_container_width=True):
             st.cache_data.clear()
             st.rerun()
 
 def get_plotly_layout(height=340, title=None):
-    """Standardized dark-mode layout for Plotly figures."""
     layout = dict(
         template="plotly_dark",
         paper_bgcolor='rgba(0,0,0,0)',

@@ -1,7 +1,6 @@
 import streamlit as st
 import pandas as pd
 import plotly.express as px
-import plotly.graph_objects as go
 from data_loader import load_full_data
 from theme import apply_theme, render_sidebar, render_metric_card, get_plotly_layout
 
@@ -22,7 +21,7 @@ render_sidebar(df)
 
 # Header
 st.markdown('<div class="page-title">Machine Learning Component</div>', unsafe_allow_html=True)
-st.markdown('<div class="page-subtitle">Two-stage unsupervised architecture: Global K-Means clustering + Intra-cluster Isolation Forests.</div>', unsafe_allow_html=True)
+st.markdown('<div class="page-subtitle">Group satellites into orbital families with K-Means, then find outliers using Isolation Forest.</div>', unsafe_allow_html=True)
 st.markdown('<div class="accent-bar"></div>', unsafe_allow_html=True)
 
 # KPIs
@@ -34,31 +33,34 @@ flag_pct = (n_flagged / n_total) * 100
 
 k1, k2, k3, k4 = st.columns(4)
 with k1:
-    render_metric_card("Orbital Clusters", f"{n_clusters}", "K-Means Partitions", "#818cf8")
+    render_metric_card("Orbital Clusters", f"{n_clusters}", "Found by K-Means", "#818cf8")
 with k2:
-    render_metric_card("ML Flagged", f"{n_flagged:,}", f"{flag_pct:.2f}% anomaly rate", "#f87171", "#ef4444")
+    render_metric_card("ML Flagged", f"{n_flagged:,}", f"{flag_pct:.2f}% of catalog", "#f87171", "#ef4444")
 with k3:
-    render_metric_card("Nominal Satellites", f"{n_nominal:,}", f"{100 - flag_pct:.2f}% conforming", "#34d399", "#10b981")
+    render_metric_card("Normal Satellites", f"{n_nominal:,}", f"{100 - flag_pct:.2f}% not flagged", "#34d399", "#10b981")
 with k4:
-    render_metric_card("Model Type", "Isolation Forest", "Intra-Cluster Trees", "#38bdf8")
+    render_metric_card("Algorithm", "Isolation Forest", "Run inside each cluster", "#38bdf8")
 
 st.markdown("<br>", unsafe_allow_html=True)
 
 # Methodology Explanation Card
-with st.expander("Methodology: Why Two-Stage Machine Learning?", expanded=False):
+with st.expander("Why use both K-Means and Isolation Forest?", expanded=False):
     st.markdown("""
-    1. **Why not a single global Isolation Forest?** Satellites naturally belong to distinct orbital regimes (e.g. LEO constellations vs geostationary communication belts). A single global model would misclassify all GEO satellites as anomalies simply because they are far from the dense LEO cluster.
-    2. **Stage 1 (K-Means Clustering):** Partitions the catalog into homogenous orbital families based on normalized semi-major axis, eccentricity, inclination, and motion.
-    3. **Stage 2 (Intra-Cluster Isolation Forest):** An ensemble of isolation trees is evaluated specifically *within* each cluster. Spacecraft that isolate at shallow tree depths within their own family receive a negative score and are flagged.
+    1. **Why not just run Isolation Forest on everything?**  
+       Satellites naturally sit in very different orbits (like low Earth orbit vs. geostationary orbit 36,000 km away). If we ran Isolation Forest across all satellites at once, it would mark normal geostationary satellites as outliers simply because they are far away from the huge crowd of low Earth orbit satellites.
+    2. **Step 1 (K-Means):**  
+       Groups similar satellites together based on normalized orbital features (semi-major axis, eccentricity, inclination).
+    3. **Step 2 (Isolation Forest):**  
+       Looks inside each cluster separately. Satellites that sit far away from their cluster peers get a negative score and are flagged.
     """)
 
 # Plots Row
 col_plot1, col_plot2 = st.columns([1.4, 1])
 
 with col_plot1:
-    st.markdown("#### Orbital Family Map (Sampled Spacecraft)")
+    st.markdown("#### Orbital Clusters (3,000 Sampled Satellites)")
     sample_df = df.sample(n=min(3000, len(df)), random_state=42).copy()
-    sample_df['Status'] = sample_df['ml_flag'].map({1: 'ML Anomaly', 0: 'Nominal'})
+    sample_df['Status'] = sample_df['ml_flag'].map({1: 'ML Flagged Outlier', 0: 'Normal'})
     sample_df['Cluster_Label'] = "Cluster " + sample_df['cluster_id'].astype(str)
     
     fig_clusters = px.scatter(
@@ -67,9 +69,9 @@ with col_plot1:
         y='INCLINATION',
         color='Cluster_Label',
         symbol='Status',
-        symbol_map={'Nominal': 'circle', 'ML Anomaly': 'x'},
+        symbol_map={'Normal': 'circle', 'ML Flagged Outlier': 'x'},
         hover_data=['NORAD_CAT_ID', 'OBJECT_NAME', 'ml_anomaly_score'],
-        labels={'semi_major_axis': 'Semi-Major Axis (km)', 'INCLINATION': 'Inclination (deg)'}
+        labels={'semi_major_axis': 'Semi-Major Axis (km)', 'INCLINATION': 'Inclination (degrees)'}
     )
     fig_clusters.update_traces(marker=dict(size=5, opacity=0.7))
     layout_c = get_plotly_layout(height=360)
@@ -85,13 +87,13 @@ with col_plot2:
         nbins=45,
         color='ml_flag',
         color_discrete_map={0: '#38bdf8', 1: '#ef4444'},
-        labels={'ml_anomaly_score': 'Decision Function Score', 'count': 'Spacecraft'}
+        labels={'ml_anomaly_score': 'Isolation Forest Score', 'count': 'Satellites'}
     )
     fig_hist.update_traces(marker_line_width=0)
     layout_h = get_plotly_layout(height=360)
     layout_h['showlegend'] = False
-    layout_h['xaxis']['title'] = "Isolation Score (Negative = Outlier)"
-    layout_h['yaxis']['title'] = "Count"
+    layout_h['xaxis']['title'] = "Score (Negative = Outlier)"
+    layout_h['yaxis']['title'] = "Number of Satellites"
     layout_h['shapes'] = [
         dict(type="line", x0=0, x1=0, y0=0, y1=1, yref="paper", line=dict(color="#f87171", dash="dash", width=1.5))
     ]
@@ -101,7 +103,7 @@ with col_plot2:
 st.markdown("<br>", unsafe_allow_html=True)
 
 # Cluster Breakdown Table
-st.markdown("#### Orbital Family Diagnostic Summary")
+st.markdown("#### Cluster Summary Table")
 cluster_summary = df.groupby('cluster_id').agg(
     Total_Satellites=('NORAD_CAT_ID', 'count'),
     ML_Anomalies=('ml_flag', 'sum'),
@@ -117,18 +119,18 @@ cluster_summary['Mean_Eccentricity'] = cluster_summary['Mean_Eccentricity'].roun
 cluster_summary['Anomaly_Rate'] = cluster_summary['Anomaly_Rate'].round(2)
 
 cluster_summary.columns = [
-    'Cluster ID', 'Total Objects', 'Flagged Anomalies', 'Avg Altitude (km)', 
-    'Avg Inclination (°)', 'Avg Eccentricity', 'Anomaly Rate (%)'
+    'Cluster ID', 'Total Satellites', 'Flagged Outliers', 'Avg Altitude (km)', 
+    'Avg Inclination (°)', 'Avg Eccentricity', 'Flag Rate (%)'
 ]
 
 st.dataframe(
     cluster_summary.style.format({
-        'Total Objects': '{:,}',
-        'Flagged Anomalies': '{:,}',
+        'Total Satellites': '{:,}',
+        'Flagged Outliers': '{:,}',
         'Avg Altitude (km)': '{:,.1f}',
         'Avg Inclination (°)': '{:.2f}',
         'Avg Eccentricity': '{:.4f}',
-        'Anomaly Rate (%)': '{:.2f}%'
+        'Flag Rate (%)': '{:.2f}%'
     }),
     use_container_width=True,
     hide_index=True

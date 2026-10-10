@@ -1,12 +1,11 @@
 import streamlit as st
 import pandas as pd
-import numpy as np
 import plotly.graph_objects as go
 from data_loader import load_full_data
 from theme import apply_theme, render_sidebar, get_plotly_layout
 
 st.set_page_config(
-    page_title="Satellite Deep-Dive Explorer",
+    page_title="Satellite Explorer",
     page_icon="🔍",
     layout="wide"
 )
@@ -21,20 +20,20 @@ if df.empty:
 render_sidebar(df)
 
 # Header
-st.markdown('<div class="page-title">Satellite Deep-Dive Explorer</div>', unsafe_allow_html=True)
-st.markdown('<div class="page-subtitle">Interactive inspection tool comparing Machine Learning and Discrete Math structural evidence side-by-side.</div>', unsafe_allow_html=True)
+st.markdown('<div class="page-title">Satellite Explorer</div>', unsafe_allow_html=True)
+st.markdown('<div class="page-subtitle">Inspect individual satellites to see whether Machine Learning or Discrete Math flagged them, and why.</div>', unsafe_allow_html=True)
 st.markdown('<div class="accent-bar"></div>', unsafe_allow_html=True)
 
 # Filter Controls
 col_f1, col_f2 = st.columns([1, 2])
 with col_f1:
     filter_score = st.selectbox(
-        "Filter by Evidence Level:",
-        ["Score 2 · High Priority (Both Flagged)", "Score 1 · Single Model Flag", "Score 0 · Nominal", "All Spacecraft"],
+        "Filter by score:",
+        ["Score 2 (Flagged by both ML & DM)", "Score 1 (Flagged by one method)", "Score 0 (Not flagged)", "All Satellites"],
         index=0
     )
 with col_f2:
-    search_query = st.text_input("Search by NORAD ID or Name:", placeholder="e.g. 28885, STARLINK, COSMOS...")
+    search_query = st.text_input("Search by NORAD ID or name:", placeholder="e.g. 28885, STARLINK, COSMOS...")
 
 # Filter dataset
 filtered_df = df.copy()
@@ -57,19 +56,19 @@ if len(filtered_df) == 0:
     st.stop()
 
 # Satellite selection
-st.caption(f"Showing {len(filtered_df):,} matching satellites:")
+st.caption(f"Found {len(filtered_df):,} matching satellites:")
 options = [
     f"[Score {row['anomaly_score']}] NORAD {row['NORAD_CAT_ID']} · {row['OBJECT_NAME']}"
     for _, row in filtered_df.iterrows()
 ]
-selected_option = st.selectbox("Select Spacecraft to Inspect:", options, label_visibility="collapsed")
+selected_option = st.selectbox("Select a satellite to inspect:", options, label_visibility="collapsed")
 selected_norad = int(selected_option.split("NORAD ")[1].split(" ·")[0])
 sat = df[df['NORAD_CAT_ID'] == selected_norad].iloc[0]
 
 # Compute score info
 score = int(sat['anomaly_score'])
 score_color = "#ef4444" if score == 2 else ("#f59e0b" if score == 1 else "#10b981")
-score_label = "HIGH PRIORITY DUAL FLAG" if score == 2 else ("MODERATE REVIEW" if score == 1 else "NOMINAL ORBIT")
+score_label = "SCORE 2 · BOTH METHODS FLAGGED" if score == 2 else ("SCORE 1 · ONE METHOD FLAGGED" if score == 1 else "SCORE 0 · NOT FLAGGED")
 
 # Satellite Profile Card
 epoch_str = str(sat.get('EPOCH', 'N/A'))[:19].replace('T', ' ')
@@ -85,14 +84,14 @@ st.markdown(f"""
             <div style="font-size: 0.85rem; color: #94a3b8; margin-top: 4px; display: flex; gap: 12px; flex-wrap: wrap;">
                 <span>NORAD ID: <b style="color: #e2e8f0;">{sat['NORAD_CAT_ID']}</b></span>
                 <span>·</span>
-                <span>Orbital Regime: <b style="color: #e2e8f0;">Cluster {cluster_id}</b></span>
+                <span>K-Means Cluster: <b style="color: #e2e8f0;">Cluster {cluster_id}</b></span>
                 <span>·</span>
                 <span>Epoch: <b style="color: #e2e8f0;">{epoch_str} UTC</b></span>
             </div>
         </div>
         <div>
             <span style="display: inline-block; background: {score_color}22; color: {score_color}; border: 1px solid {score_color}55; padding: 6px 14px; border-radius: 6px; font-weight: 700; font-size: 0.85rem; letter-spacing: 0.05em;">
-                SCORE {score} · {score_label}
+                {score_label}
             </span>
         </div>
     </div>
@@ -102,7 +101,7 @@ st.markdown(f"""
 # Orbital Elements Grid
 k1, k2, k3, k4, k5 = st.columns(5)
 with k1:
-    st.metric("Altitude (Perigee/Apogee)", f"{sat['orbit_height']:.1f} km")
+    st.metric("Altitude", f"{sat['orbit_height']:.1f} km")
 with k2:
     st.metric("Inclination", f"{sat['INCLINATION']:.2f}°")
 with k3:
@@ -115,24 +114,24 @@ with k5:
 st.markdown("<br>", unsafe_allow_html=True)
 
 # Side-by-side Model Evidence
-st.markdown("### Model Evidence Comparison")
+st.markdown("### Detection Details")
 col_ml, col_dm = st.columns(2)
 
 with col_ml:
     ml_flagged = bool(sat['ml_flag'])
     ml_status_color = "#ef4444" if ml_flagged else "#10b981"
-    ml_status_text = "FLAGGED (ANOMALOUS)" if ml_flagged else "NORMAL (WITHIN BOUNDS)"
+    ml_status_text = "FLAGGED AS OUTLIER" if ml_flagged else "NORMAL (NOT FLAGGED)"
     
     st.markdown(f"""
     <div class="evidence-panel" style="border-top: 3px solid {ml_status_color};">
         <div class="evidence-header">
-            <span style="color: #e2e8f0;">Machine Learning Component</span>
+            <span style="color: #e2e8f0;">Machine Learning Check</span>
             <span style="color: {ml_status_color}; font-size: 0.8rem; font-weight: 700;">{ml_status_text}</span>
         </div>
         <div style="margin-bottom: 12px;">
-            <div style="font-size: 0.8rem; color: #94a3b8; text-transform: uppercase;">Methodology</div>
+            <div style="font-size: 0.8rem; color: #94a3b8; text-transform: uppercase;">Method</div>
             <div style="font-size: 0.9rem; color: #cbd5e1; margin-top: 2px;">
-                Intra-Cluster Isolation Forest trained on K-Means orbital family (Cluster {cluster_id}).
+                Isolation Forest run inside K-Means Cluster {cluster_id}.
             </div>
         </div>
         <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 14px;">
@@ -142,17 +141,17 @@ with col_ml:
                 <div style="font-size: 0.7rem; color: #64748b;">(Negative = Outlier)</div>
             </div>
             <div style="background: rgba(0,0,0,0.25); padding: 10px; border-radius: 6px;">
-                <div style="font-size: 0.75rem; color: #94a3b8;">Cluster Assignment</div>
+                <div style="font-size: 0.75rem; color: #94a3b8;">Cluster Group</div>
                 <div style="font-size: 1.15rem; font-weight: 600; color: #f8fafc;">Cluster {cluster_id}</div>
-                <div style="font-size: 0.7rem; color: #64748b;">Orbital Family Context</div>
+                <div style="font-size: 0.7rem; color: #64748b;">Orbital Family</div>
             </div>
         </div>
         <div style="font-size: 0.85rem; color: #cbd5e1; line-height: 1.5; padding: 10px; background: rgba(255,255,255,0.02); border-radius: 6px; border: 1px solid rgba(255,255,255,0.05);">
-            <b>Diagnostic Assessment:</b><br>
+            <b>Explanation:</b><br>
             {
-                "The spacecraft's orbital parameters isolate quickly during recursive tree partitioning, placing it in the extreme tail of its orbital family distribution." 
+                "This satellite sits far from other satellites in its orbital cluster, so the Isolation Forest marks it as an outlier." 
                 if ml_flagged else 
-                "The spacecraft's telemetry falls well within the high-density region of its assigned orbital family."
+                "This satellite's orbit fits right in with the rest of its cluster."
             }
         </div>
     </div>
@@ -161,7 +160,7 @@ with col_ml:
 with col_dm:
     dm_flagged = bool(sat['dm_flag'])
     dm_status_color = "#ef4444" if dm_flagged else "#10b981"
-    dm_status_text = "FLAGGED (TOPOLOGICALLY ISOLATED)" if dm_flagged else "NORMAL (WELL CONNECTED)"
+    dm_status_text = "FLAGGED AS ISOLATED" if dm_flagged else "NORMAL (CONNECTED)"
     in_deg = int(sat['incoming_neighbor_count'])
     mean_dist = float(sat['mean_neighbor_distance'])
     global_mean = float(sat['global_mean_dist'])
@@ -169,33 +168,33 @@ with col_dm:
     st.markdown(f"""
     <div class="evidence-panel" style="border-top: 3px solid {dm_status_color};">
         <div class="evidence-header">
-            <span style="color: #e2e8f0;">Discrete Mathematics Component</span>
+            <span style="color: #e2e8f0;">Discrete Math (Graph) Check</span>
             <span style="color: {dm_status_color}; font-size: 0.8rem; font-weight: 700;">{dm_status_text}</span>
         </div>
         <div style="margin-bottom: 12px;">
-            <div style="font-size: 0.8rem; color: #94a3b8; text-transform: uppercase;">Methodology</div>
+            <div style="font-size: 0.8rem; color: #94a3b8; text-transform: uppercase;">Method</div>
             <div style="font-size: 0.9rem; color: #cbd5e1; margin-top: 2px;">
-                Directed 5-Nearest Neighbour Graph in standardized 6D orbital parameter space.
+                Directed 5-nearest-neighbor graph built from standardized orbital features.
             </div>
         </div>
         <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 14px;">
             <div style="background: rgba(0,0,0,0.25); padding: 10px; border-radius: 6px;">
-                <div style="font-size: 0.75rem; color: #94a3b8;">In-Degree d⁻(v)</div>
-                <div style="font-size: 1.15rem; font-weight: 600; color: #f8fafc;">{in_deg} incoming edges</div>
-                <div style="font-size: 0.7rem; color: #64748b;">(Must equal 0 for flag)</div>
+                <div style="font-size: 0.75rem; color: #94a3b8;">Incoming Neighbors (In-Degree)</div>
+                <div style="font-size: 1.15rem; font-weight: 600; color: #f8fafc;">{in_deg}</div>
+                <div style="font-size: 0.7rem; color: #64748b;">(Must be 0 to flag)</div>
             </div>
             <div style="background: rgba(0,0,0,0.25); padding: 10px; border-radius: 6px;">
                 <div style="font-size: 0.75rem; color: #94a3b8;">Mean 5-NN Distance</div>
                 <div style="font-size: 1.15rem; font-weight: 600; color: #f8fafc;">{mean_dist:.4f}</div>
-                <div style="font-size: 0.7rem; color: #64748b;">Global Mean: {global_mean:.4f}</div>
+                <div style="font-size: 0.7rem; color: #64748b;">Catalog Mean: {global_mean:.4f}</div>
             </div>
         </div>
         <div style="font-size: 0.85rem; color: #cbd5e1; line-height: 1.5; padding: 10px; background: rgba(255,255,255,0.02); border-radius: 6px; border: 1px solid rgba(255,255,255,0.05);">
-            <b>Diagnostic Assessment:</b><br>
+            <b>Explanation:</b><br>
             {
-                f"Structurally isolated: No other satellite selects this node among its 5 nearest neighbours (in-degree = 0) and its own mean neighbor distance ({mean_dist:.4f}) exceeds the catalog average ({global_mean:.4f})."
+                f"Isolated node: No other satellite has this satellite in its 5 nearest neighbors (in-degree is 0), and its own neighbors are further away than average ({mean_dist:.4f} vs. catalog average {global_mean:.4f})."
                 if dm_flagged else
-                f"Connected graph node: Selected by {in_deg} satellite(s) as a nearest neighbour with acceptable local density."
+                f"Connected node: {in_deg} satellite(s) have this in their top 5 closest neighbors, with normal distance."
             }
         </div>
     </div>
@@ -204,7 +203,7 @@ with col_dm:
 st.markdown("<br>", unsafe_allow_html=True)
 
 # Contextual Deviation Radar
-st.markdown("#### Parameter Deviation from Catalog Median")
+st.markdown("#### Comparison with Catalog Averages")
 features_compare = ['orbit_height', 'INCLINATION', 'ECCENTRICITY', 'semi_major_axis']
 labels_compare = ['Altitude (km)', 'Inclination (°)', 'Eccentricity', 'Semi-Major Axis (km)']
 
@@ -233,4 +232,4 @@ layout_bar['shapes'] = [
 ]
 fig_bar.update_layout(layout_bar)
 st.plotly_chart(fig_bar, use_container_width=True)
-st.caption("Dashed lines represent ±2.0 standard deviations from the catalog median. Parameters exceeding this threshold indicate the primary drivers of anomalous classification.")
+st.caption("Dashed lines show ±2 standard deviations. Values outside this range show what makes this satellite unusual.")
