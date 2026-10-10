@@ -1,7 +1,8 @@
 import streamlit as st
 import pandas as pd
+import plotly.graph_objects as go
 from data_loader import load_full_data
-from theme import apply_theme, render_sidebar
+from theme import apply_theme, render_sidebar, get_plotly_layout
 from diagnostics import get_operator_explanation
 
 st.set_page_config(
@@ -118,6 +119,91 @@ with k4:
     st.metric("Orbital Speed", f"{speed_val:.2f} km/s")
 with k5:
     st.metric("Orbital Period", f"{period_val:.1f} min")
+
+st.markdown("<br>", unsafe_allow_html=True)
+
+# Visual Comparison: Map & Benchmark Table
+col_v1, col_v2 = st.columns([1.2, 1])
+
+with col_v1:
+    st.markdown("#### Position in Low Earth Orbit")
+    bg_df = df.sample(n=min(2000, len(df)), random_state=42)
+    fig_loc = go.Figure()
+    
+    # Background satellites
+    fig_loc.add_trace(go.Scatter(
+        x=bg_df['orbit_height'],
+        y=bg_df['INCLINATION'],
+        mode='markers',
+        marker=dict(size=4, color='#334155', opacity=0.4),
+        name='LEO Catalog',
+        hoverinfo='skip'
+    ))
+    
+    # Selected satellite
+    fig_loc.add_trace(go.Scatter(
+        x=[alt_val],
+        y=[inc_val],
+        mode='markers+text',
+        marker=dict(size=14, color=score_color, symbol='diamond', line=dict(width=2, color='#ffffff')),
+        text=[sat['OBJECT_NAME']],
+        textposition="top center",
+        textfont=dict(size=11, color='#f8fafc'),
+        name=sat['OBJECT_NAME'],
+        hovertemplate=f"<b>{sat['OBJECT_NAME']}</b><br>Altitude: {alt_val:,.1f} km<br>Inclination: {inc_val:.2f}°<extra></extra>"
+    ))
+    
+    loc_layout = get_plotly_layout(height=280)
+    loc_layout['xaxis']['title'] = "Altitude (km)"
+    loc_layout['yaxis']['title'] = "Inclination (°)"
+    loc_layout['xaxis']['range'] = [100, 2000]
+    loc_layout['yaxis']['range'] = [0, 115]
+    loc_layout['showlegend'] = False
+    fig_loc.update_layout(loc_layout)
+    st.plotly_chart(fig_loc, use_container_width=True)
+    st.caption("Gray dots represent active LEO satellites. Diamond marks this satellite's orbit.")
+
+with col_v2:
+    st.markdown("#### Comparison with LEO Norms")
+    
+    if alt_val > 1000:
+        alt_status = "Upper LEO Corridor (Rare)"
+    elif alt_val < 350:
+        alt_status = "Very Low Orbit (Decay Zone)"
+    else:
+        alt_status = "Standard Shell (Common)"
+        
+    if ecc_val > 0.05:
+        ecc_status = "Highly Elliptical (Rare in LEO)"
+    elif ecc_val > 0.01:
+        ecc_status = "Slightly Oval"
+    else:
+        ecc_status = "Near Circular (Standard)"
+        
+    if 95 <= inc_val <= 105:
+        inc_status = "Sun-Synchronous Polar Shell"
+    elif abs(inc_val - 53.0) < 5:
+        inc_status = "Standard Constellation Tilt (53°)"
+    else:
+        inc_status = f"Uncommon Tilt ({inc_val:.1f}°)"
+        
+    in_deg = int(sat.get('incoming_neighbor_count', 0))
+    if in_deg == 0:
+        nbr_status = "Isolated (0 close peers)"
+    elif in_deg >= 5:
+        nbr_status = "Well Connected (Standard)"
+    else:
+        nbr_status = "Sparse Neighborhood"
+
+    comp_df = pd.DataFrame([
+        {"Parameter": "Altitude", "This Satellite": f"{alt_val:,.1f} km", "Typical LEO": "480–550 km", "Assessment": alt_status},
+        {"Parameter": "Orbit Shape (Ecc.)", "This Satellite": f"{ecc_val:.5f}", "Typical LEO": "< 0.001", "Assessment": ecc_status},
+        {"Parameter": "Inclination (Tilt)", "This Satellite": f"{inc_val:.2f}°", "Typical LEO": "53° or 98°", "Assessment": inc_status},
+        {"Parameter": "Close Neighbors", "This Satellite": f"{in_deg}", "Typical LEO": "5", "Assessment": nbr_status},
+    ])
+    
+    st.dataframe(comp_df, hide_index=True, use_container_width=True)
+    st.caption("Benchmarked against the active LEO population median.")
 
 st.markdown("<br>", unsafe_allow_html=True)
 

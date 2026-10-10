@@ -65,33 +65,34 @@ col_left, col_right = st.columns([1.5, 1])
 with col_left:
     st.markdown("#### Satellite Counts by Score")
     dist_df = pd.DataFrame({
-        'Status': ['Score 0 (Normal)', 'Score 1 (One Method)', 'Score 2 (Both Methods)'],
-        'Count': [n_score0, n_score1, n_score2],
-        'Color': ['#10b981', '#f59e0b', '#ef4444']
+        'Status': ['Score 2 (Both Flagged)', 'Score 1 (One Flag)', 'Score 0 (Normal)'],
+        'Count': [n_score2, n_score1, n_score0],
+        'Color': ['#ef4444', '#f59e0b', '#10b981'],
+        'TextLabel': [f"{n_score2:,} ({pct2:.2f}%)", f"{n_score1:,} ({pct1:.1f}%)", f"{n_score0:,} ({pct0:.1f}%)"]
     })
     
     fig = px.bar(
         dist_df,
-        x='Status',
-        y='Count',
-        text='Count',
+        y='Status',
+        x='Count',
+        orientation='h',
+        text='TextLabel',
         color='Status',
         color_discrete_map={
             'Score 0 (Normal)': '#10b981',
-            'Score 1 (One Method)': '#f59e0b',
-            'Score 2 (Both Methods)': '#ef4444'
+            'Score 1 (One Flag)': '#f59e0b',
+            'Score 2 (Both Flagged)': '#ef4444'
         }
     )
     fig.update_traces(
-        texttemplate='%{text:,}',
         textposition='outside',
         marker_line_width=0,
-        hovertemplate='<b>%{x}</b><br>Satellites: %{y:,}<extra></extra>'
+        hovertemplate='<b>%{y}</b><br>Satellites: %{x:,}<extra></extra>'
     )
     layout = get_plotly_layout(height=280)
     layout['showlegend'] = False
-    layout['yaxis']['title'] = "Number of Satellites"
-    layout['xaxis']['title'] = ""
+    layout['xaxis']['title'] = "Number of Satellites"
+    layout['yaxis']['title'] = ""
     fig.update_layout(layout)
     st.plotly_chart(fig, use_container_width=True)
 
@@ -148,26 +149,74 @@ with c_s3:
     render_metric_card("Above 600 km", f"{shell_upper:,}", "e.g. Weather and Earth observation", "#a78bfa")
 
 # Scatter overview
-st.markdown("#### Altitude vs. Inclination")
-sample_df = df.sample(n=min(3000, len(df)), random_state=42)
+st.markdown("#### Satellite Altitude vs. Inclination Map")
+sample_df = df.sample(n=min(3000, len(df)), random_state=42).copy()
+
+# Ensure all Score 2 satellites are included so they are never missed in the sample
+s2_all = df[df['anomaly_score'] == 2]
+sample_df = pd.concat([sample_df, s2_all]).drop_duplicates(subset=['NORAD_CAT_ID'])
+
+# Map score to clear categorical names
+sample_df['Status'] = sample_df['anomaly_score'].map({
+    0: 'Normal (Score 0)',
+    1: 'One Flag (Score 1)',
+    2: 'Both Flagged (Score 2)'
+})
+
+# Sort so Score 2 points are plotted ON TOP of normal points
+sample_df = sample_df.sort_values(by='anomaly_score')
+
 fig_scatter = px.scatter(
     sample_df,
     x='orbit_height',
     y='INCLINATION',
-    color='anomaly_score',
+    color='Status',
     range_x=[100, 2000],
-    color_continuous_scale=[(0, '#10b981'), (0.5, '#f59e0b'), (1, '#ef4444')],
-    hover_data=['NORAD_CAT_ID', 'OBJECT_NAME', 'anomaly_score'],
-    labels={'orbit_height': 'Altitude (km)', 'INCLINATION': 'Inclination (degrees)', 'anomaly_score': 'Score'},
+    range_y=[0, 115],
+    color_discrete_map={
+        'Normal (Score 0)': '#475569',
+        'One Flag (Score 1)': '#f59e0b',
+        'Both Flagged (Score 2)': '#ef4444'
+    },
+    hover_data=['NORAD_CAT_ID', 'OBJECT_NAME'],
+    labels={'orbit_height': 'Altitude (km)', 'INCLINATION': 'Inclination (°)', 'Status': 'Status'},
 )
-fig_scatter.update_traces(marker=dict(size=4, opacity=0.75))
-scatter_layout = get_plotly_layout(height=360)
-scatter_layout['coloraxis_colorbar'] = dict(
-    title="Score",
-    tickvals=[0, 1, 2],
-    ticktext=["0 (Normal)", "1 (One Flag)", "2 (Both Flagged)"],
-    len=0.7
+
+fig_scatter.update_traces(
+    hovertemplate="<b>%{customdata[1]}</b> (NORAD %{customdata[0]})<br>Altitude: %{x:,.0f} km<br>Inclination: %{y:.1f}°<extra></extra>"
 )
+
+fig_scatter.update_traces(
+    selector=dict(name='Normal (Score 0)'),
+    marker=dict(size=4, opacity=0.45)
+)
+fig_scatter.update_traces(
+    selector=dict(name='One Flag (Score 1)'),
+    marker=dict(size=6, opacity=0.85)
+)
+fig_scatter.update_traces(
+    selector=dict(name='Both Flagged (Score 2)'),
+    marker=dict(size=9, opacity=1.0, line=dict(width=1, color='#ffffff'))
+)
+
+scatter_layout = get_plotly_layout(height=380)
+scatter_layout['legend'] = dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1)
+scatter_layout['annotations'] = [
+    dict(
+        x=550, y=53,
+        text="Starlink Shell (~550 km, 53°)",
+        showarrow=True, arrowhead=2, arrowcolor="#94a3b8",
+        ax=-60, ay=-35,
+        font=dict(size=11, color="#cbd5e1")
+    ),
+    dict(
+        x=750, y=98,
+        text="Sun-Synchronous Polar (~98°)",
+        showarrow=True, arrowhead=2, arrowcolor="#94a3b8",
+        ax=-70, ay=35,
+        font=dict(size=11, color="#cbd5e1")
+    )
+]
 fig_scatter.update_layout(scatter_layout)
 st.plotly_chart(fig_scatter, use_container_width=True)
-st.caption("Plotting 3,000 sampled satellites. Colors show the final score (0 = Green, 1 = Yellow, 2 = Red).")
+st.caption("Dense clusters form at ~550 km (Starlink) and ~98° (Polar). Red dots are the high-priority anomalies flagged by both methods.")

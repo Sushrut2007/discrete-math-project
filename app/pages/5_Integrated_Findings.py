@@ -53,10 +53,16 @@ col_c1, col_c2 = st.columns([1.2, 1])
 
 with col_c1:
     st.markdown("#### Satellites by Flag Type")
+    total_flagged = n_score1 + n_score2
     combo_data = pd.DataFrame({
-        'Category': ['Score 1 (ML Only)', 'Score 1 (Graph Only)', 'Score 2 (Both ML & Graph)'],
-        'Count': [ml_only, dm_only, dual_flag],
-        'Color': ['#f59e0b', '#0284c7', '#ef4444']
+        'Category': ['Score 2 (Both Flagged)', 'Score 1 (Graph Only)', 'Score 1 (ML Only)'],
+        'Count': [dual_flag, dm_only, ml_only],
+        'Color': ['#ef4444', '#0284c7', '#f59e0b'],
+        'TextLabel': [
+            f"{dual_flag:,} ({dual_flag/total_flagged*100:.1f}%) · Top Priority",
+            f"{dm_only:,} ({dm_only/total_flagged*100:.1f}%) · Isolated Spacing",
+            f"{ml_only:,} ({ml_only/total_flagged*100:.1f}%) · Cluster Outliers"
+        ]
     })
     
     fig_combo = px.bar(
@@ -64,16 +70,15 @@ with col_c1:
         x='Count',
         y='Category',
         orientation='h',
-        text='Count',
+        text='TextLabel',
         color='Category',
         color_discrete_map={
             'Score 1 (ML Only)': '#f59e0b',
             'Score 1 (Graph Only)': '#0284c7',
-            'Score 2 (Both ML & Graph)': '#ef4444'
+            'Score 2 (Both Flagged)': '#ef4444'
         }
     )
     fig_combo.update_traces(
-        texttemplate='%{text:,}',
         textposition='outside',
         marker_line_width=0,
         hovertemplate='<b>%{y}</b><br>Satellites: %{x:,}<extra></extra>'
@@ -86,23 +91,32 @@ with col_c1:
     st.plotly_chart(fig_combo, use_container_width=True)
 
 with col_c2:
-    st.markdown("#### How to Read This List")
-    st.markdown("""
+    st.markdown("#### How the Two Methods Compare")
+    st.markdown(f"""
     <div style="background: #0f172a; border: 1px solid rgba(255,255,255,0.08); border-radius: 8px; padding: 16px; font-size: 0.85rem; color: #cbd5e1; line-height: 1.5;">
-        <p style="margin-bottom: 8px;">
-            <b>Score Breakdown:</b>
-        </p>
-        <p style="margin-bottom: 8px;">
-            • <b>Score 2 ({0} satellites):</b> Both Machine Learning and Graph analysis flagged this satellite. These have the most unusual orbits in the catalog.
-        </p>
-        <p style="margin-bottom: 8px;">
-            • <b>Score 1 ({1} satellites):</b> One method flagged it. These satellites usually have uncommon tilts or sit near the edge of a cluster.
-        </p>
-        <p style="margin-bottom: 0px; font-size: 0.75rem; color: #94a3b8;">
-            You can search any of these satellites in the <b>Satellite Explorer</b> page to inspect their detailed parameters.
-        </p>
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 12px;">
+            <div style="background: rgba(245, 158, 11, 0.08); border: 1px solid rgba(245, 158, 11, 0.25); border-radius: 6px; padding: 10px;">
+                <div style="font-size: 0.72rem; color: #fbbf24; text-transform: uppercase; font-weight: 600;">ML Flagged</div>
+                <div style="font-size: 1.25rem; font-weight: 700; color: #f8fafc;">792</div>
+                <div style="font-size: 0.7rem; color: #94a3b8;">5.0% of LEO catalog</div>
+            </div>
+            <div style="background: rgba(56, 189, 248, 0.08); border: 1px solid rgba(56, 189, 248, 0.25); border-radius: 6px; padding: 10px;">
+                <div style="font-size: 0.72rem; color: #38bdf8; text-transform: uppercase; font-weight: 600;">Graph Flagged</div>
+                <div style="font-size: 1.25rem; font-weight: 700; color: #f8fafc;">64</div>
+                <div style="font-size: 0.7rem; color: #94a3b8;">0.4% of LEO catalog</div>
+            </div>
+        </div>
+        <div style="background: rgba(239, 68, 68, 0.1); border-left: 3px solid #ef4444; border-radius: 6px; padding: 10px; margin-bottom: 8px;">
+            <div style="font-size: 0.85rem; font-weight: 700; color: #f87171;">Dual Confirmation: 22 Satellites</div>
+            <div style="font-size: 0.78rem; color: #cbd5e1; margin-top: 2px;">
+                These 22 satellites were independently caught by <b>both</b> methods. They have the most unusual orbits in the entire active LEO catalog.
+            </div>
+        </div>
+        <div style="font-size: 0.75rem; color: #94a3b8; line-height: 1.4;">
+            <b>Why combine both?</b> ML catches satellites that deviate from their altitude group, while Graph catches satellites that have no close peers in space.
+        </div>
     </div>
-    """.format(dual_flag, n_score1), unsafe_allow_html=True)
+    """, unsafe_allow_html=True)
 
 st.markdown("<br>", unsafe_allow_html=True)
 
@@ -131,15 +145,15 @@ table_display = priority_subset[[
 ]].sort_values(by='orbit_height', ascending=False)
 
 table_display.columns = [
-    'NORAD ID', 'Name', 'Altitude (km)', 
-    'Inclination (°)', 'Eccentricity', 'Main Reason Flagged'
+    'NORAD ID', 'Satellite Name', 'Altitude (km)', 
+    'Inclination (°)', 'Orbit Shape (Ecc.)', 'Main Reason Flagged'
 ]
 
 st.dataframe(
     table_display.style.format({
         'Altitude (km)': '{:,.1f}',
         'Inclination (°)': '{:.2f}',
-        'Eccentricity': '{:.4f}'
+        'Orbit Shape (Ecc.)': '{:.4f}'
     }),
     use_container_width=True,
     hide_index=True

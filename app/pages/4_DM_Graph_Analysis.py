@@ -33,13 +33,13 @@ total_edges = n_total * 5
 
 k1, k2, k3, k4 = st.columns(4)
 with k1:
-    render_metric_card("LEO Satellites", f"{n_total:,}", "Graph Nodes", "#60a5fa")
+    render_metric_card("LEO Satellites", f"{n_total:,}", "Catalog Objects", "#60a5fa")
 with k2:
-    render_metric_card("Directed Spacing Links", f"{total_edges:,}", "5 Nearest Neighbors per Node", "#818cf8")
+    render_metric_card("Neighbor Connections", f"{total_edges:,}", "5 closest peers per satellite", "#818cf8")
 with k3:
-    render_metric_card("Unreciprocated Nodes", f"{n_zero_indegree:,}", "In-degree = 0", "#fbbf24")
+    render_metric_card("Zero Incoming", f"{n_zero_indegree:,}", "No satellite has these in top-5", "#fbbf24")
 with k4:
-    render_metric_card("Isolated Satellites", f"{n_dm_flagged}", "Structurally Isolated in LEO", "#f87171", "#ef4444")
+    render_metric_card("Isolated Satellites", f"{n_dm_flagged}", "Empty orbital corridors", "#f87171", "#ef4444")
 
 st.markdown("<br>", unsafe_allow_html=True)
 
@@ -50,13 +50,13 @@ st.markdown("""
         Graph Isolation Rule
     </div>
     <div style="font-size: 1.05rem; color: #f8fafc; font-family: 'JetBrains Mono', monospace; margin-bottom: 10px;">
-        Flag = (In-Degree == 0) AND (Neighbor Distance > Global Average)
+        Flag = (Incoming Neighbors == 0) AND (Neighbor Distance > Catalog Average)
     </div>
     <div style="font-size: 0.85rem; color: #94a3b8; line-height: 1.5;">
-        <b>Operational Meaning:</b>
+        <b>What this means:</b>
         <ul style="margin-top: 6px; margin-bottom: 0px;">
-            <li><b>In-Degree == 0:</b> No other active LEO satellite has this satellite among its 5 closest neighbors.</li>
-            <li><b>Above-Average Neighbor Distance:</b> Its own nearest neighbors are farther away than normal for the LEO catalog, confirming that it occupies an unusually empty orbital corridor.</li>
+            <li><b>Zero Incoming Neighbors:</b> No other satellite has this satellite among its 5 closest peers.</li>
+            <li><b>Above-Average Spacing:</b> Its own 5 closest neighbors are unusually far away, confirming an empty orbital region.</li>
         </ul>
     </div>
 </div>
@@ -68,22 +68,31 @@ col_g1, col_g2 = st.columns([1, 1.2])
 with col_g1:
     st.markdown("#### Incoming Neighbors Distribution")
     in_deg_counts = df['incoming_neighbor_count'].value_counts().sort_index().reset_index()
-    in_deg_counts.columns = ['In-Degree', 'Count']
-    plot_deg = in_deg_counts[in_deg_counts['In-Degree'] <= 15].copy()
-    plot_deg['Color'] = ['#f59e0b' if deg == 0 else '#3b82f6' for deg in plot_deg['In-Degree']]
+    in_deg_counts.columns = ['In_Degree', 'Count']
+    plot_deg = in_deg_counts[in_deg_counts['In_Degree'] <= 15].copy()
     
     fig_deg = px.bar(
         plot_deg,
-        x='In-Degree',
+        x='In_Degree',
         y='Count',
-        color='In-Degree',
-        color_discrete_sequence=plot_deg['Color'].tolist()
+        color='In_Degree',
+        color_discrete_map={0: '#ef4444'},
+        color_continuous_scale=None
     )
-    fig_deg.update_traces(marker_line_width=0, hovertemplate="In-Degree: %{x}<br>Count: %{y:,}<extra></extra>")
+    # Highlight 0 in red and others in slate blue
+    bar_colors = ['#ef4444' if deg == 0 else '#38bdf8' for deg in plot_deg['In_Degree']]
+    fig_deg.update_traces(
+        marker_color=bar_colors,
+        marker_line_width=0,
+        hovertemplate="Incoming Neighbors: %{x}<br>Satellites: %{y:,}<extra></extra>"
+    )
     layout_deg = get_plotly_layout(height=320)
     layout_deg['showlegend'] = False
-    layout_deg['xaxis']['title'] = "Number of Incoming Neighbors (In-Degree)"
+    layout_deg['xaxis']['title'] = "Number of Other Satellites Having This as Peer"
     layout_deg['yaxis']['title'] = "Number of Satellites"
+    layout_deg['annotations'] = [
+        dict(x=0, y=plot_deg[plot_deg['In_Degree']==0]['Count'].iloc[0], text="🚨 64 with 0", showarrow=True, arrowhead=2, arrowcolor="#f87171", ax=35, ay=-25, font=dict(color="#f87171", size=10))
+    ]
     fig_deg.update_layout(layout_deg)
     st.plotly_chart(fig_deg, use_container_width=True)
 
@@ -92,27 +101,44 @@ with col_g2:
     sample_dm = df.sample(n=min(3000, len(df)), random_state=42).copy()
     flagged_dm = df[df['dm_flag'] == 1]
     plot_scatter = pd.concat([sample_dm, flagged_dm]).drop_duplicates(subset=['NORAD_CAT_ID'])
-    plot_scatter['DM_Status'] = plot_scatter['dm_flag'].map({1: 'Isolated (Flagged)', 0: 'Standard LEO Node'})
+    plot_scatter['DM_Status'] = plot_scatter['dm_flag'].map({1: '🚨 Isolated (Flagged)', 0: 'Standard LEO Spacing'})
+    
+    # Sort so Flagged points plot on top
+    plot_scatter = plot_scatter.sort_values(by='dm_flag')
     
     fig_iso = px.scatter(
         plot_scatter,
         x='incoming_neighbor_count',
         y='mean_neighbor_distance',
         color='DM_Status',
-        color_discrete_map={'Standard LEO Node': '#38bdf8', 'Isolated (Flagged)': '#ef4444'},
+        color_discrete_map={'Standard LEO Spacing': '#38bdf8', '🚨 Isolated (Flagged)': '#ef4444'},
         hover_data=['NORAD_CAT_ID', 'OBJECT_NAME', 'orbit_height'],
-        labels={'incoming_neighbor_count': 'In-Degree', 'mean_neighbor_distance': 'Neighbor Distance'}
+        labels={'incoming_neighbor_count': 'Incoming Neighbors', 'mean_neighbor_distance': 'Relative Spacing'}
     )
-    fig_iso.update_traces(marker=dict(size=5, opacity=0.75))
+    fig_iso.update_traces(
+        marker=dict(size=4, opacity=0.55),
+        hovertemplate="<b>%{customdata[1]}</b> (NORAD %{customdata[0]})<br>Incoming Neighbors: %{x}<br>Relative Spacing: %{y:.2f}<br>Altitude: %{customdata[2]:,.0f} km<extra></extra>"
+    )
+    fig_iso.update_traces(
+        selector=dict(name='🚨 Isolated (Flagged)'),
+        marker=dict(size=8, opacity=1.0, line=dict(width=1, color='#ffffff'))
+    )
+    
+    max_y = float(plot_scatter['mean_neighbor_distance'].max())
     layout_iso = get_plotly_layout(height=320)
     layout_iso['shapes'] = [
-        dict(type="line", x0=-0.5, x1=15, y0=global_mean_dist, y1=global_mean_dist, line=dict(color="#f59e0b", dash="dash", width=1.5)),
-        dict(type="line", x0=0.5, x1=0.5, y0=0, y1=plot_scatter['mean_neighbor_distance'].max(), line=dict(color="#f59e0b", dash="dash", width=1.5))
+        # Shaded top-left isolation zone
+        dict(type="rect", x0=-0.5, x1=0.5, y0=global_mean_dist, y1=max_y * 1.05, fillcolor="rgba(239, 68, 68, 0.15)", line=dict(color="#ef4444", width=1.5, dash="dot"), layer="below"),
+        dict(type="line", x0=-0.5, x1=15, y0=global_mean_dist, y1=global_mean_dist, line=dict(color="#94a3b8", dash="dash", width=1))
+    ]
+    layout_iso['annotations'] = [
+        dict(x=0.0, y=max_y * 0.95, text="🚨 Isolated Zone", showarrow=False, font=dict(color="#f87171", size=11, weight="bold"), align="left"),
+        dict(x=12, y=global_mean_dist + 0.1, text="Catalog Average Spacing", showarrow=False, font=dict(color="#94a3b8", size=9))
     ]
     layout_iso['legend'] = dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1)
     fig_iso.update_layout(layout_iso)
     st.plotly_chart(fig_iso, use_container_width=True)
-    st.caption("Top-left quadrant (In-Degree = 0 and Distance > Threshold) marks isolated satellites operating outside standard LEO constellation shells.")
+    st.caption("The shaded red zone (0 incoming neighbors and far spacing) highlights satellites operating in empty corridors.")
 
 st.markdown("<br>", unsafe_allow_html=True)
 
