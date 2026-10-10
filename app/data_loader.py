@@ -36,6 +36,10 @@ def load_full_data():
     df['global_mean_dist'] = df['mean_neighbor_distance'].mean()
     df['anomaly_score'] = df['anomaly_score'].fillna(0).astype(int)
     
+    # Enforce strict Low Earth Orbit (LEO <= 2,000 km) boundary
+    if 'orbit_height' in df.columns:
+        df = df[(df['orbit_height'] >= 100.0) & (df['orbit_height'] <= 2000.0)].reset_index(drop=True)
+    
     return df
 
 def rerun_full_pipeline():

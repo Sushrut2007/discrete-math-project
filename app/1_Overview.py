@@ -155,6 +155,7 @@ fig_scatter = px.scatter(
     x='orbit_height',
     y='INCLINATION',
     color='anomaly_score',
+    range_x=[100, 2000],
     color_continuous_scale=[(0, '#10b981'), (0.5, '#f59e0b'), (1, '#ef4444')],
     hover_data=['NORAD_CAT_ID', 'OBJECT_NAME', 'anomaly_score'],
     labels={'orbit_height': 'Altitude (km)', 'INCLINATION': 'Inclination (degrees)', 'anomaly_score': 'Score'},
