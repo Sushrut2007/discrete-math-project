@@ -2,13 +2,11 @@
 
 ## 1. Project Overview
 
-This project combines Machine Learning (ML) and Discrete Mathematics (DM) to analyze satellite orbital data and identify satellites whose current orbital state or recent orbital changes are statistically unusual.
+This project combines Machine Learning (ML) and Discrete Mathematics (DM) to analyze satellite orbital data and identify satellites whose current orbital state is statistically unusual.
 
 The project uses active satellite orbital data from CelesTrak. The system analyzes the orbital characteristics of satellites, groups satellites with comparable orbital characteristics, detects unusual observations using Machine Learning, and represents orbital similarity relationships using Discrete Mathematics and graph theory.
 
-A short history of satellite snapshots is also used to determine whether a satellite's orbital parameters have changed unusually over time.
-
-The final system does not attempt to predict collisions or determine whether a satellite is physically dangerous. Instead, it identifies statistically unusual orbital states or changes and provides evidence that can be used for further investigation.
+The final system does not attempt to predict collisions or determine whether a satellite is physically dangerous. Instead, it identifies statistically unusual orbital states and provides evidence that can be used for further investigation.
 
 ---
 
@@ -27,12 +25,11 @@ For example, a satellite may have:
 
 However, an unusual value does not automatically mean that something is wrong. Some satellites naturally occupy uncommon orbital regimes.
 
-Therefore, the system needs to answer two related questions:
+Therefore, the system needs to answer the question:
 
 1. **Is the satellite's current orbital state unusual compared with comparable satellites?**
-2. **Has the satellite's orbital state recently changed in an unusual way?**
 
-The project addresses these questions using Machine Learning, Discrete Mathematics, and a small amount of temporal information from satellite snapshots.
+The project addresses this question using Machine Learning and Discrete Mathematics.
 
 ---
 
@@ -52,19 +49,16 @@ Detect unusual current orbital states using Machine Learning
 ↓  
 Represent orbital similarity relationships using Discrete Mathematics and graph theory  
 ↓  
-Compare recent orbital changes using stored snapshots  
-↓  
 Integrate the evidence  
 ↓  
 Present the result to the user
 
-The important idea is that the three sources of information have different roles:
+The important idea is that the two sources of information have different roles:
 
 - **Machine Learning** identifies unusual orbital observations.
 - **Discrete Mathematics** represents and analyzes relationships between satellites.
-- **Snapshots** provide recent historical context.
 
-These provide complementary evidence rather than three completely independent forms of evidence.
+These provide complementary evidence rather than completely independent forms of evidence.
 
 ---
 
@@ -126,42 +120,9 @@ The similarity relationship is about similarity in selected orbital characterist
 
 ---
 
-## 6. Why Use Satellite Snapshots?
+## 6. What the Final System Produces
 
-A single satellite snapshot describes the satellite's current orbital state.
-
-It does not show whether that state has recently changed.
-
-To provide a small amount of temporal context, the project collects satellite snapshots over approximately seven days.
-
-Satellites are matched across snapshots using their NORAD catalog ID.
-
-For each satellite, changes in selected orbital parameters can then be calculated:
-
-Δa = a(current) - a(previous)
-
-Δe = e(current) - e(previous)
-
-Δi = i(current) - i(previous)
-
-where:
-
-- a = semi-major axis
-- e = eccentricity
-- i = inclination
-
-These changes allow the system to distinguish between:
-
-- a satellite that currently has an unusual orbit, and
-- a satellite whose orbital state has recently changed unusually.
-
-The snapshot component is intentionally limited in scope. It is used as recent historical context rather than as a complete long-term orbital-evolution model.
-
----
-
-## 7. What the Final System Produces
-
-The system provides an integrated interpretation for satellites in the analyzed population.
+The system provides an integrated interpretation for satellites in the analyzed population. The final integration score ranges from 0 to 2, representing the number of components (ML and DM) that flag the satellite as unusual.
 
 For a selected satellite, the user can see:
 
@@ -172,32 +133,27 @@ For a selected satellite, the user can see:
 - anomaly score,
 - relevant anomaly evidence,
 - orbital similarity information,
-- graph-based context,
-- recent orbital changes when sufficient snapshot data is available.
+- graph-based context.
 
-Possible interpretations include:
+Possible interpretations based on the score include:
 
-### No significant anomaly detected
+### 0: No significant anomaly detected
 
-The current orbital state and recent change do not provide significant unusual evidence.
+The current orbital state does not provide significant unusual evidence from either component.
 
-### Rare orbit type
+### 1: Rare orbit type
 
-The current orbital state is unusual compared with comparable satellites, while recent change does not appear unusual.
+The current orbital state is flagged as unusual by one component (either ML or DM).
 
-### Notable orbital change
+### 2: Requires investigation
 
-The current orbital state may not be unusual, but its recent change is unusual.
-
-### Requires investigation
-
-Multiple sources of evidence indicate that the satellite deserves further examination.
+Multiple sources of evidence (both ML and DM) indicate that the satellite's current orbital state is unusual and deserves further examination.
 
 These interpretations do not prove that a satellite is malfunctioning or dangerous.
 
 ---
 
-## 8. Project Boundaries
+## 7. Project Boundaries
 
 The system is designed for satellite orbital anomaly analysis.
 
@@ -210,11 +166,11 @@ It does **not**:
 - claim that an anomalous satellite is malfunctioning,
 - provide a percentage probability of danger.
 
-The system should instead describe results as statistically unusual orbital states or changes that may deserve further investigation.
+The system should instead describe results as statistically unusual orbital states that may deserve further investigation.
 
 ---
 
-## 9. Final Concept
+## 8. Final Concept
 
 The project can be summarized as:
 
@@ -222,6 +178,4 @@ The project can be summarized as:
 
 **Discrete Mathematics represents and analyzes the relationships between satellites.**
 
-**Satellite snapshots provide recent temporal context.**
-
-The final system integrates these forms of information to provide an explainable satellite anomaly-detection result.
+The final system integrates these two forms of information to provide an explainable satellite anomaly-detection result.

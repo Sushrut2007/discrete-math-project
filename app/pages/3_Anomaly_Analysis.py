@@ -11,11 +11,10 @@ st.markdown("Detailed breakdown of the integrated results across the catalog.")
 
 counts = df['anomaly_score'].value_counts()
 
-c1, c2, c3, c4 = st.columns(4)
+c1, c2, c3 = st.columns(3)
 c1.metric("Score 0 (Nominal)", f"{counts.get(0, 0):,}")
-c2.metric("Score 1 (Low Warning)", f"{counts.get(1, 0):,}")
-c3.metric("Score 2 (High Warning)", f"{counts.get(2, 0):,}")
-c4.metric("Score 3 (Critical)", f"{counts.get(3, 0):,}")
+c2.metric("Score 1 (Warning)", f"{counts.get(1, 0):,}")
+c3.metric("Score 2 (Critical)", f"{counts.get(2, 0):,}")
 
 st.markdown("---")
 st.markdown("### Score Combination Analysis")
@@ -26,8 +25,7 @@ def get_combo(row):
     parts = []
     if row['ml_flag']: parts.append("ML")
     if row['dm_flag']: parts.append("DM")
-    if row['temporal_flag']: parts.append("Temporal")
-    return " + ".join(parts)
+    return " + ".join(parts) if parts else "None"
     
 anomalous['Combination'] = anomalous.apply(get_combo, axis=1)
 combo_counts = anomalous['Combination'].value_counts().reset_index()

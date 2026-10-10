@@ -1,8 +1,6 @@
-# ML and DM Based Satellite Anomaly Detection
+# Project Overview
 
-## 1. Introduction and Problem Statement
-
-The Earth's orbit is currently populated by over 16,000 tracked objects, including active satellites, dead payloads, and debris. Monitoring this environment traditionally relies on calculating direct physical collision probabilities. However, physical conjunction is only one part of Space Situational Awareness (SSA). 
+We have over 16,000 satellites in Earth orbit, ranging from LEO to GEO. Monitoring this vast amount of space traffic is a complex challenge.
 
 We also need to identify **orbital anomalies**—satellites that are behaving unusually or occupy strange orbits. An anomaly could indicate:
 - An active orbital maneuver (station-keeping or collision avoidance).
@@ -10,12 +8,11 @@ We also need to identify **orbital anomalies**—satellites that are behaving un
 - An experimental mission profile (e.g., solar sails, space tugs).
 - Orbital decay due to atmospheric drag.
 
-The goal of this project is to build an anomaly detection pipeline that does not rely on a single algorithm. Instead, it evaluates the satellite catalog through three distinct mathematical lenses:
+The goal of this project is to build an anomaly detection pipeline that does not rely on a single algorithm. Instead, it evaluates the satellite catalog through two distinct mathematical lenses:
 1. **Machine Learning (ML)** for statistical deviation.
 2. **Discrete Mathematics (DM)** for structural and topological isolation.
-3. **Temporal Analysis** for recent behavioral shifts.
 
-By combining these three methods, we can filter the catalog of 16,000 objects down to a small list of genuinely unusual satellites, reducing false positives and providing a clear reason for why a satellite was flagged.
+By combining these two methods, we can filter the catalog of 16,000 objects down to a small list of genuinely unusual satellites, reducing false positives and providing a clear reason for why a satellite was flagged.
 
 ---
 
@@ -26,8 +23,8 @@ The system operates on daily snapshots of Two-Line Element (TLE) data provided b
 1. **Feature Extraction:** We parse TLEs into classical Keplerian elements: Semi-major axis ($a$), Eccentricity ($e$), and Inclination ($i$). We also calculate derived physical metrics like Apogee, Perigee, and Orbital Period.
 2. **Standardization:** Since altitude ranges in thousands of kilometers while eccentricity is between 0 and 1, we standardize the data using z-scores so all features share a common scale:
    $$ Z = \frac{X - \mu}{\sigma} $$
-3. **Parallel Processing:** The standardized data is passed through the ML, DM, and Temporal pipelines simultaneously.
-4. **Integration:** Each pipeline outputs a binary flag ($0$ or $1$). The final system tallies these flags to produce an anomaly score from $0$ to $3$.
+3. **Parallel Processing:** The standardized data is passed through the ML and DM pipelines simultaneously.
+4. **Integration:** Each pipeline outputs a binary flag ($0$ or $1$). The final system tallies these flags to produce an anomaly score from $0$ to $2$.
 
 ---
 
@@ -73,37 +70,20 @@ By adding the second rule, we ensure the satellite is both **unpopular** (in-deg
 
 ---
 
-## 5. Temporal Analysis: Recent Orbital Change
-
-The ML and DM pipelines evaluate a single daily snapshot. The Temporal pipeline evaluates the satellite's behavior over time using a **Self-History Similarity Graph**.
-
-### How it works
-Satellites naturally drift due to atmospheric drag, and active satellites frequently perform station-keeping maneuvers. To judge if a satellite's movement is abnormal, we cannot compare it to other satellites. We must compare it to its own recent past.
-
-1. We calculate the day-to-day orbital changes (transitions) for each satellite over a historical window:
-   $$ \Delta a_t = a_t - a_{t-1} $$
-   $$ \Delta e_t = e_t - e_{t-1} $$
-2. We take the **latest transition** (what the satellite did between yesterday and today) and compare it against **all of its past transitions** using Euclidean distance.
-3. We count how many past transitions are mathematically "similar" (distance $\le \epsilon$) to today's transition. This count acts as the "degree" of similarity.
-4. If the similarity count is **0 or 1**, it means today's orbital shift looks nothing like anything the satellite has done recently. The system assigns the **Temporal Flag** ($F_{Temp} = 1$).
-
-### Scientific Justification
-This is essentially a temporal extension of the Discrete Mathematics graph, but instead of connecting a satellite to its neighbors, **the satellite connects to its own past selves**. By making the satellite its own baseline, the algorithm adapts to the specific physics of that object. It ignores routine, expected drift and only triggers when a satellite suddenly breaks its own established behavioral pattern.
-
----
-
-## 6. Integration: The Evidence Tally
+## 5. Integration: The Evidence Tally
 
 Anomaly detection in large datasets is prone to false positives. To solve this, we do not allow any single algorithm to make the final decision. 
 
-We integrate the three pipelines using a simple evidence tally:
-$$ \text{Final Score} = F_{ML} + F_{DM} + F_{Temp} $$
+We integrate the two pipelines using a simple evidence tally:
+$$ \text{Final Score} = F_{ML} + F_{DM} $$
 
-The result is a highly interpretable 0 to 3 scale:
-*   **Score 0 (Nominal):** No detectors flagged the satellite.
-*   **Score 1 (Low Warning):** Only one detector found an issue. Often a minor statistical outlier or routine maneuver.
-*   **Score 2 (High Warning):** Two detectors agreed. For example, a satellite that is statistically unusual (ML) and actively changing orbit (Temporal).
-*   **Score 3 (Critical):** Unanimous consensus. The satellite is statistically sparse, structurally isolated, and undergoing a sudden orbital change. 
+The result is a highly interpretable 0 to 2 scale:
+*   **Score 0 (Nominal):** Neither ML nor DM flagged the satellite.
+*   **Score 1 (Warning):** Either ML or DM flagged the satellite.
+*   **Score 2 (Critical):** Both ML and DM flagged the satellite. This gives it the highest priority for investigation.
+
+### Important Note
+The score represents the number of methods that flagged the satellite. It is **not a probability or a measure of danger**. Furthermore, ML and DM use some of the same orbital features, so they are not completely independent methods.
 
 ### Summary of Benefits
-This approach is extremely transparent. Unlike deep learning models ("black boxes"), this pipeline allows an operator to see exactly *why* a satellite was flagged. The integration of Discrete Mathematics provides a rigid, structural verification that standard statistical Machine Learning often misses, ensuring that only the most genuinely anomalous objects reach Score 3.
+This approach is extremely transparent. Unlike deep learning models ("black boxes"), this pipeline allows an operator to see exactly *why* a satellite was flagged. The integration of Discrete Mathematics provides a rigid, structural verification that standard statistical Machine Learning often misses, ensuring that only the most genuinely anomalous objects reach Score 2.

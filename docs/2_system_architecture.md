@@ -10,7 +10,6 @@ The system combines:
 - orbital feature engineering
 - Machine Learning
 - Discrete Mathematics and graph theory
-- temporal satellite snapshots
 - result integration
 - Streamlit-based user interface
 
@@ -62,30 +61,15 @@ Other fields can be retained in the dataset for identification, additional analy
 
 The data collection layer obtains the latest active satellite data.
 
-For the temporal component, multiple snapshots are stored.
-
-Each snapshot should preserve:
-
-* the original satellite data,
-* download time,
-* orbital `EPOCH`,
-* NORAD catalog ID.
-
 A simplified structure is:
 
 ```text
 data/
 └── raw/
-    └── snapshots/
-        ├── snapshot_01.csv
-        ├── snapshot_02.csv
-        ├── snapshot_03.csv
-        └── ...
+    └── celestrak_data.csv
 ```
 
-The raw snapshots should not be modified after collection.
-
-This allows the processing pipeline to reproduce the temporal calculations later.
+The raw data should not be modified after collection.
 
 ---
 
@@ -146,7 +130,7 @@ Only features that are useful and appropriate for the final model should be reta
 
 ## 7. Current Orbital Analysis
 
-After feature engineering, the latest usable satellite snapshot becomes the main current-state dataset.
+After feature engineering, the dataset becomes the main current-state dataset.
 
 The current-state analysis answers:
 
@@ -155,7 +139,7 @@ The current-state analysis answers:
 The pipeline is:
 
 ```text
-Latest snapshot
+Latest data
       ↓
 Feature engineering
       ↓
@@ -307,102 +291,14 @@ It becomes useful when considered together with the satellite's orbital characte
 
 ---
 
-## 13. Temporal Analysis Layer
+## 13. Evidence Integration
 
-The temporal layer uses multiple collected snapshots.
-
-Satellites are matched using:
-
-```text
-NORAD_CAT_ID
-```
-
-For two observations of the same satellite:
-
-```text
-Δa = a₂ - a₁
-
-Δe = e₂ - e₁
-
-Δi = i₂ - i₁
-```
-
-The actual difference in time between the two orbital epochs is used when calculating rates.
-
-For example:
-
-```text
-Δa_rate = (a₂ - a₁) / Δt
-```
-
-where `Δt` is the elapsed time in days.
-
-The same approach can be applied to eccentricity and inclination.
-
----
-
-## 14. Temporal Machine Learning
-
-The temporal component asks:
-
-> Did this satellite change unusually compared with satellites in a comparable orbital population?
-
-The general process is:
-
-```text
-Multiple snapshots
-        ↓
-Match satellites by NORAD ID
-        ↓
-Calculate orbital changes
-        ↓
-Calculate change rates
-        ↓
-Use orbital-group context
-        ↓
-Temporal anomaly detection
-        ↓
-Recent-change evidence
-```
-
-The temporal model should compare changes with the behaviour of comparable satellites.
-
-A decrease in altitude, for example, should not automatically be treated as an anomaly because some orbital regimes naturally experience orbital decay.
-
----
-
-## 15. Fixed Reference Groups
-
-For the initial implementation, the current orbital grouping can be used as a stable comparison context for the temporal analysis.
-
-This avoids repeatedly changing the meaning of the groups every time a new snapshot is collected.
-
-Conceptually:
-
-```text
-Reference snapshot
-        ↓
-K-Means
-        ↓
-Stable orbital groups
-        ↓
-Compare subsequent orbital changes
-```
-
-This approach can be revisited in future versions if longer-term data becomes available.
-
----
-
-## 16. Evidence Integration
-
-The final interpretation combines three main sources:
+The final interpretation combines the two main sources:
 
 ```text
 Current-state ML
        +
 Graph context
-       +
-Temporal analysis
        ↓
 Integrated interpretation
 ```
@@ -411,40 +307,19 @@ The sources are complementary.
 
 They should not be described as completely independent evidence because the Machine Learning and graph analysis use related orbital features.
 
-Possible combinations include:
+The integration score ranges from 0 to 2, based on how many components indicate an anomaly.
 
-```text
-Current state unusual
-Recent change not unusual
-        ↓
-Rare orbit type
-```
+Possible scores and interpretations include:
 
-```text
-Current state not unusual
-Recent change unusual
-        ↓
-Notable orbital change
-```
-
-```text
-Current state unusual
-Recent change unusual
-        ↓
-Requires investigation
-```
-
-```text
-Neither provides significant unusual evidence
-        ↓
-No significant anomaly detected
-```
+* **0: No significant anomaly detected.** Neither component flags the satellite.
+* **1: Rare orbit type.** One component flags the satellite.
+* **2: Requires investigation.** Both components flag the satellite as unusual.
 
 These are system interpretations rather than proof of an actual fault or danger.
 
 ---
 
-## 17. Application Layer
+## 14. Application Layer
 
 The final results are passed to the Streamlit application.
 
@@ -455,8 +330,7 @@ The application provides two levels of information.
 Displays:
 
 * satellite information,
-* anomaly interpretation,
-* anomaly score,
+* anomaly interpretation (score 0-2),
 * main evidence.
 
 ### Technical View
@@ -467,17 +341,13 @@ Displays:
 * K-Means cluster,
 * Isolation Forest result,
 * similarity graph,
-* graph properties,
-* temporal changes,
-* Δa,
-* Δe,
-* Δi.
+* graph properties.
 
 This separation allows the system to remain understandable while still exposing the technical basis of its results.
 
 ---
 
-## 18. Proposed Source Structure
+## 15. Proposed Source Structure
 
 The project code is organized according to responsibility.
 
@@ -496,11 +366,8 @@ src/
 ├── dm/
 │   └── similarity relationships and graph analysis
 │
-├── temporal/
-│   └── snapshot matching and orbital-change analysis
-│
 └── integration/
-    └── combining ML, graph, and temporal evidence
+    └── combining ML and graph evidence
 ```
 
 The user interface is separated from the analysis code:
@@ -514,7 +381,7 @@ This prevents the Streamlit interface from containing the core Machine Learning 
 
 ---
 
-## 19. Complete Data Flow
+## 16. Complete Data Flow
 
 The complete architecture can therefore be summarized as:
 
@@ -529,19 +396,15 @@ The complete architecture can therefore be summarized as:
                         ↓
               Current Orbital Dataset
                         ↓
-                 ┌──────┴──────┐
-                 ↓             ↓
-              K-Means       Snapshots
-                 ↓             ↓
-        Orbital Groups    Match by NORAD ID
-                 ↓             ↓
-        Isolation Forest   Δa, Δe, Δi
-                 ↓             ↓
-        Current Anomaly   Temporal Anomaly
-                 ↓             ↓
-                 └──────┬──────┘
+                     K-Means
                         ↓
-               Similarity Graph
+                 Orbital Groups
+                        ↓
+                Isolation Forest
+                        ↓
+                Current Anomaly
+                        ↓
+                Similarity Graph
                         ↓
                 Evidence Integration
                         ↓
@@ -552,7 +415,7 @@ The complete architecture can therefore be summarized as:
 
 ---
 
-## 20. Architecture Principle
+## 17. Architecture Principle
 
 Each component answers a different question:
 
@@ -563,13 +426,9 @@ Each component answers a different question:
 | K-Means             | Which satellites have comparable orbital characteristics?     |
 | Isolation Forest    | Which observations are unusual within those groups?           |
 | Similarity Graph    | How is each satellite related to nearby orbital observations? |
-| Temporal Analysis   | Has the satellite changed unusually over the observed period? |
 | Integration         | What does the combined evidence indicate?                     |
 | Streamlit           | How can the user investigate the result?                      |
 
 The architecture is therefore based on a simple principle:
 
-**Current orbital state + orbital relationships + recent change → explainable anomaly analysis**
-
-
-
+**Current orbital state + orbital relationships → explainable anomaly analysis**

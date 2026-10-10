@@ -9,7 +9,6 @@ The goal is not only to make the pipeline run, but to verify that:
 * the orbital features are calculated correctly,
 * the ML anomaly detector behaves as intended,
 * the discrete-mathematics components provide meaningful orbital-relationship information,
-* temporal changes are calculated correctly,
 * the different components integrate without producing misleading conclusions.
 
 The system should report **statistically unusual orbital patterns** rather than claiming that a satellite is definitively anomalous.
@@ -39,35 +38,20 @@ dm_env
 
 ---
 
-### Phase 2 — Data collection and snapshots
+### Phase 2 — Data collection
 
 Implement the CelesTrak data collector.
 
 The system will:
 
 1. retrieve the current satellite dataset,
-2. save the raw snapshot,
-3. record the collection time,
-4. retain previous snapshots instead of overwriting them.
+2. save the raw data.
 
-The temporal dataset will therefore develop as:
+The raw dataset will therefore develop as:
 
 ```text
-data/raw/snapshots/
-
-snapshot_01.csv
-snapshot_02.csv
-snapshot_03.csv
-...
+data/raw/celestrak_data.csv
 ```
-
-Satellites will be matched between snapshots using:
-
-```text
-NORAD_CAT_ID
-```
-
-The satellite's `EPOCH` will be used to determine the actual time difference between observations.
 
 ---
 
@@ -80,7 +64,7 @@ The first analytical component will answer:
 The pipeline will follow:
 
 ```text
-CelesTrak snapshot
+CelesTrak data
         ↓
 Data cleaning
         ↓
@@ -130,112 +114,53 @@ The graph should therefore be treated as **contextual evidence**, not as a stand
 
 ---
 
-# 5. Temporal Behaviour Component
+# 5. Integration
 
-The temporal component answers a different question:
-
-> **Has this satellite changed unusually over time compared with comparable satellites?**
-
-For matched satellites between observations:
-
-$$
-\Delta a = a_{t_2}-a_{t_1}
-$$
-
-$$
-\Delta e = e_{t_2}-e_{t_1}
-$$
-
-$$
-\Delta i = i_{t_2}-i_{t_1}
-$$
-
-The corresponding rates can be calculated using the actual time interval:
-
-$$
-\Delta a_{\text{rate}}
-=
-\frac{a_{t_2}-a_{t_1}}
-{t_2-t_1}
-$$
-
-and similarly for \(e\) and \(i\).
-
-The system should **not assume that two snapshots are exactly 24 hours apart**.
-
-The change features will then be compared within a comparable orbital population.
-
-Conceptually:
+The two analytical perspectives will be combined:
 
 ```text
-Historical snapshots
-        ↓
-Match NORAD IDs
-        ↓
-Calculate orbital changes
-        ↓
-Calculate change rates
-        ↓
-Compare with comparable satellites
-        ↓
-Temporal anomaly evidence
+              Current-state ML
+                     │
+                     ▼
+              Orbit-type evidence
+                     │
+                     │
+Graph ──────────────┼
+                     │
+                     ▼
+               Combined evidence
+                     │
+                     ▼
+              Operator-facing result
 ```
 
-A large change is therefore **not automatically an anomaly**.
-
----
-
-# 6. Integration
-
-The three analytical perspectives will be combined:
-
-```text
-             Current-state ML
-                    │
-                    ▼
-             Orbit-type evidence
-                    │
-                    │
-Graph ──────────────┼────────────── Temporal ML
-                    │
-                    ▼
-              Combined evidence
-                    │
-                    ▼
-             Operator-facing result
-```
+The final integration score ranges from 0 to 2, representing the number of components (ML and DM) that flag the satellite as unusual.
 
 The system should distinguish between:
 
-### Case 1 — Current state unusual, behaviour not unusual
-
-Possible interpretation:
-
-> Rare or unusual orbital configuration that appears relatively stable.
-
-### Case 2 — Current state not unusual, behaviour unusual
-
-Possible interpretation:
-
-> Notable recent orbital change.
-
-### Case 3 — Both unusual
-
-Possible interpretation:
-
-> Multiple analytical signals indicate that the satellite deserves further investigation.
-
-### Case 4 — Neither unusual
+### Score 0 — Neither unusual
 
 Output:
 
 > **No significant anomaly detected.**
 
+### Score 1 — Rare orbit type
+
+Output:
+
+> Rare or unusual orbital configuration according to one component.
+
+### Score 2 — Both unusual
+
+Output:
+
+> **Requires investigation.** Multiple analytical signals indicate that the satellite deserves further investigation.
+
 These are interpretations of the available data, not definitive explanations of why a satellite behaved that way.
 
 ---
 
-# 7. Evidence Independence
+# 6. Evidence Independence
 
 The system must **not** describe ML and graph results as independent evidence.
 
@@ -253,11 +178,9 @@ rather than:
 
 > **independent confirmation**
 
-Temporal evidence is also related to the same orbital quantities, although it examines their **changes over time** rather than only their current values.
-
 ---
 
-# 8. Synthetic Validation
+# 7. Synthetic Validation
 
 Because the project does not have a complete ground-truth dataset containing labelled real-world satellite anomalies, controlled synthetic anomalies will be used for an initial validation experiment.
 
@@ -303,21 +226,13 @@ must not be made solely from synthetic testing.
 
 ---
 
-# 9. External Validation
+# 8. External Validation
 
 Where independently documented orbital events are available, they can be used as an additional validation source.
 
-For example, an independently documented orbital maneuver could be compared with the temporal detector's output.
-
-However:
-
-> **A maneuver is not automatically an anomaly.**
-
-The purpose of this comparison is to determine whether the temporal component responds to documented orbital changes, not to label every maneuver as abnormal.
-
 ---
 
-# 10. Discrete Mathematics Validation
+# 9. Discrete Mathematics Validation
 
 The mathematical structures themselves should also be checked.
 
@@ -354,7 +269,7 @@ These tests ensure that the mathematical model implemented in code matches the m
 
 ---
 
-# 11. Error Analysis
+# 10. Error Analysis
 
 Validation will not stop at a single metric.
 
@@ -366,8 +281,6 @@ For example:
 ML anomaly
       +
 Graph not unusual
-      +
-Temporal not unusual
 ```
 
 versus:
@@ -376,18 +289,6 @@ versus:
 ML normal
       +
 Graph sparse
-      +
-Temporal anomaly
-```
-
-and:
-
-```text
-ML anomaly
-      +
-Graph sparse
-      +
-Temporal anomaly
 ```
 
 These cases should be examined individually to understand **why** the system produced the result.
@@ -396,7 +297,7 @@ This is especially important because an unsupervised detector can produce false 
 
 ---
 
-# 12. Unit Testing
+# 11. Unit Testing
 
 Individual mathematical and data-processing functions should be tested before integration.
 
@@ -409,10 +310,6 @@ Distance calculation
         ↓
 kNN construction
         ↓
-Snapshot matching
-        ↓
-Temporal differences
-        ↓
 ML output
 ```
 
@@ -420,17 +317,13 @@ Tests should include:
 
 * missing values,
 * duplicate satellites,
-* missing snapshots,
-* satellites appearing/disappearing between snapshots,
-* incorrect time intervals,
 * very small clusters,
-* insufficient historical observations,
 * identical feature vectors,
 * extreme but valid orbital values.
 
 ---
 
-# 13. Integration Testing
+# 12. Integration Testing
 
 After individual components pass their tests, the complete pipeline should be tested.
 
@@ -449,8 +342,6 @@ Isolation Forest
  ↓
 kNN graph
  ↓
-Temporal analysis
- ↓
 Integration
  ↓
 Final output
@@ -460,26 +351,25 @@ The final output should contain enough information to identify:
 
 * satellite,
 * current-state evidence,
-* temporal evidence,
 * graph context,
 * anomaly score where applicable,
 * explanation of why the satellite was flagged.
 
 ---
 
-# 14. Known Limitations
+# 13. Known Limitations
 
 The following limitations must remain explicit in the project.
 
-### 14.1 No complete real-world anomaly labels
+### 13.1 No complete real-world anomaly labels
 
 The system cannot establish a definitive real-world anomaly accuracy without suitable labelled data.
 
-### 14.2 Synthetic validation is limited
+### 13.2 Synthetic validation is limited
 
 Synthetic anomalies represent selected controlled patterns and may not represent every real-world anomaly.
 
-### 14.3 Orbital similarity is not physical proximity
+### 13.3 Orbital similarity is not physical proximity
 
 Similarity in \((a,e,i)\) does not mean two satellites are physically close in space.
 
@@ -490,21 +380,13 @@ The system therefore does **not** calculate:
 * physical separation,
 * collision risk.
 
-### 14.4 Unusual does not mean anomalous behaviour
+### 13.4 Unusual does not mean anomalous behaviour
 
 A satellite may occupy a rare orbital configuration while remaining stable.
 
-### 14.5 Orbital change does not automatically mean abnormal behaviour
-
-A change may be intentional, environmental, operational, or otherwise explainable.
-
-### 14.6 Short temporal window
-
-A short collection period can demonstrate short-term orbital-change analysis, but it cannot establish long-term orbital behaviour.
-
 ---
 
-# 15. Final Development Principle
+# 14. Final Development Principle
 
 The system should follow this reasoning:
 
@@ -518,10 +400,6 @@ Compare satellites
 Detect unusual current states
   ↓
 Study local orbital relationships
-  ↓
-Observe changes over time
-  ↓
-Compare changes with comparable satellites
   ↓
 Combine complementary evidence
   ↓
@@ -550,5 +428,3 @@ With this file, our planned development documentation is complete:
 05_Snapshot_and_Integration.md
 06_Development_and_Validation.md
 ```
-
-

@@ -8,9 +8,9 @@ if str(project_root) not in sys.path:
 
 from src.data.constants import PROCESSED_DIR
 
-def combine_evidence(ml_df, graph_df, temporal_df):
+def combine_evidence(ml_df, graph_df):
     """
-    Combines ML, DM graph, and temporal evidence into a single anomaly score (0 to 3).
+    Combines ML and DM graph evidence into a single anomaly score (0 to 2).
     """
     # Merge ML and Graph
     merged_df = pd.merge(
@@ -18,14 +18,6 @@ def combine_evidence(ml_df, graph_df, temporal_df):
         graph_df[['NORAD_CAT_ID', 'incoming_neighbor_count', 'mean_neighbor_distance']], 
         on='NORAD_CAT_ID', 
         how='inner'
-    )
-    
-    # Merge Temporal (Left join because not all satellites may have temporal history)
-    merged_df = pd.merge(
-        merged_df,
-        temporal_df[['NORAD_CAT_ID', 'temporal_dm_label']],
-        on='NORAD_CAT_ID',
-        how='left'
     )
     
     # 1. ML Flag: anomaly_label == -1
@@ -38,18 +30,14 @@ def combine_evidence(ml_df, graph_df, temporal_df):
         (merged_df['mean_neighbor_distance'] > global_mean_dist)
     ).astype(int)
     
-    # 3. Temporal Flag: temporal_dm_label == -1
-    merged_df['temporal_flag'] = (merged_df['temporal_dm_label'] == -1).astype(int)
-    
     # Sum the flags
-    merged_df['anomaly_score'] = merged_df['ml_flag'] + merged_df['dm_flag'] + merged_df['temporal_flag']
+    merged_df['anomaly_score'] = merged_df['ml_flag'] + merged_df['dm_flag']
     
     # Interpretation Map
     score_mapping = {
-        0: 'No anomaly detected',
-        1: 'One source detected an anomaly',
-        2: 'Two sources detected an anomaly',
-        3: 'All three detected an anomaly'
+        0: 'Neither ML nor DM flagged the satellite',
+        1: 'Either ML or DM flagged the satellite',
+        2: 'Both ML and DM flagged the satellite'
     }
     merged_df['interpretation'] = merged_df['anomaly_score'].map(score_mapping)
     
@@ -57,20 +45,18 @@ def combine_evidence(ml_df, graph_df, temporal_df):
 
 def run_integration_pipeline():
     """
-    Loads processed outputs from ML, DM, and Temporal pipelines and computes final scores.
+    Loads processed outputs from ML and DM pipelines and computes final scores.
     """
     ml_path = Path(PROCESSED_DIR) / "latest_ml_anomalies.csv"
     graph_path = Path(PROCESSED_DIR) / "latest_graph_features.csv"
-    temporal_path = Path(PROCESSED_DIR) / "latest_temporal_features.csv"
     
-    if not ml_path.exists() or not graph_path.exists() or not temporal_path.exists():
+    if not ml_path.exists() or not graph_path.exists():
         raise FileNotFoundError(f"Missing one or more pipeline outputs in {PROCESSED_DIR}")
         
     ml_df = pd.read_csv(ml_path)
     graph_df = pd.read_csv(graph_path)
-    temporal_df = pd.read_csv(temporal_path)
     
-    final_df = combine_evidence(ml_df, graph_df, temporal_df)
+    final_df = combine_evidence(ml_df, graph_df)
     
     out_file = Path(PROCESSED_DIR) / "latest_integrated_results.csv"
     out_file.parent.mkdir(parents=True, exist_ok=True)
@@ -84,6 +70,6 @@ if __name__ == "__main__":
     
     counts = final_results['anomaly_score'].value_counts().sort_index()
     print("\nAnomaly Score Distribution:")
-    for score in range(4):
+    for score in range(3):
         count = counts.get(score, 0)
         print(f"Score {score}: {count} satellites")

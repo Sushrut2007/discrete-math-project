@@ -8,7 +8,7 @@ if str(project_root) not in sys.path:
     sys.path.insert(0, str(project_root))
 
 from src.data.constants import PROCESSED_DIR
-from src.data.snapshot_loader import load_latest_snapshot
+from src.data.snapshot_loader import load_latest_data
 from src.features.preprocess import clean_raw_data, standardize_features, DEFAULT_FEATURE_COLUMNS
 from src.features.orbital_features import add_orbital_features
 
@@ -16,7 +16,7 @@ from src.features.orbital_features import add_orbital_features
 def prepare_features(df=None, feature_cols=None):
     """
     Main pipeline function for this branch:
-    1. Loads the latest raw snapshot (if df is not provided)
+    1. Loads the latest raw data (if df is not provided)
     2. Cleans and validates raw satellite rows
     3. Calculates derived orbital features (a, period, apogee, perigee, speed, height)
     4. Standardizes numerical features for later ML and Graph analysis
@@ -27,8 +27,8 @@ def prepare_features(df=None, feature_cols=None):
         scaler_params: Means and stds used for standardization
     """
     if df is None:
-        print("Loading latest satellite snapshot...")
-        df = load_latest_snapshot()
+        print("Loading latest satellite data...")
+        df = load_latest_data()
 
     # Step 1: Clean raw data
     cleaned_df = clean_raw_data(df)

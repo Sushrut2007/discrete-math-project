@@ -33,7 +33,6 @@ st.markdown("""
     }
     
     .severity-critical { border-left: 4px solid #ef4444; }
-    .severity-high { border-left: 4px solid #f97316; }
     .severity-moderate { border-left: 4px solid #fbbf24; }
     .severity-low { border-left: 4px solid #22c55e; }
     
@@ -59,7 +58,7 @@ st.markdown("""
 st.markdown(f"""
 <div style="padding: 10px 0 20px 0;">
     <h1 style="font-size: 2rem; font-weight: 700; color: #e0e0e8; margin-bottom: 4px;">
-        ⚠️ Anomaly Inspector
+        🔭 Anomaly Inspector
     </h1>
     <p style="color: #8888aa; font-size: 1rem;">
         Detailed review of spacecraft telemetry and risk assessment.
@@ -69,7 +68,7 @@ st.markdown(f"""
 
 st.sidebar.markdown("### Catalog Filters")
 search_q = st.sidebar.text_input("Search ID / Name")
-status_filter = st.sidebar.selectbox("Risk Level", ["All Levels", "Nominal (Score 0)", "Warning (Score 1-2)", "Critical (Score 3)"])
+status_filter = st.sidebar.selectbox("Risk Level", ["All Levels", "Nominal (Score 0)", "Warning (Score 1)", "Critical (Score 2)"])
 
 filtered = df.copy()
 if search_q:
@@ -79,8 +78,8 @@ if search_q:
         filtered['NORAD_CAT_ID'].astype(str).str.contains(q, na=False)
     ]
 if status_filter == "Nominal (Score 0)": filtered = filtered[filtered['anomaly_score'] == 0]
-elif status_filter == "Warning (Score 1-2)": filtered = filtered[filtered['anomaly_score'].isin([1, 2])]
-elif status_filter == "Critical (Score 3)": filtered = filtered[filtered['anomaly_score'] == 3]
+elif status_filter == "Warning (Score 1)": filtered = filtered[filtered['anomaly_score'] == 1]
+elif status_filter == "Critical (Score 2)": filtered = filtered[filtered['anomaly_score'] == 2]
 
 sat_options = filtered['NORAD_CAT_ID'].astype(str) + " - " + filtered['OBJECT_NAME']
 if len(sat_options) > 0:
@@ -90,7 +89,7 @@ if len(sat_options) > 0:
     
     score = sat['anomaly_score']
     if score == 0: sev_class, sev_label, sev_color = "severity-low", "NOMINAL", "#22c55e"
-    elif score in [1, 2]: sev_class, sev_label, sev_color = "severity-moderate" if score==1 else "severity-high", f"WARNING L{score}", "#f97316"
+    elif score == 1: sev_class, sev_label, sev_color = "severity-moderate", "WARNING L1", "#fbbf24"
     else: sev_class, sev_label, sev_color = "severity-critical", "CRITICAL", "#ef4444"
     
     # --- Spacecraft Card ---
@@ -99,9 +98,9 @@ if len(sat_options) > 0:
         <div style="display: flex; justify-content: space-between; align-items: flex-start;">
             <div>
                 <span class="satellite-name">{sat['OBJECT_NAME']}</span>
-                <span class="meta-tag">🆔 ID: {sat['NORAD_CAT_ID']}</span>
-                <span class="meta-tag">🌐 Regime: Group {sat.get('cluster_id', 'N/A')}</span>
-                <span class="meta-tag">⏱️ Epoch: {str(sat.get('EPOCH', 'N/A'))[:10]}</span>
+                <span class="meta-tag">🛰 ID: {sat['NORAD_CAT_ID']}</span>
+                <span class="meta-tag">🌌 Regime: Group {sat.get('cluster_id', 'N/A')}</span>
+                <span class="meta-tag">⏱ Epoch: {str(sat.get('EPOCH', 'N/A'))[:10]}</span>
             </div>
             <div style="text-align: right;">
                 <span style="background: rgba({int(sev_color[1:3],16)},{int(sev_color[3:5],16)},{int(sev_color[5:7],16)}, 0.15); color: {sev_color}; padding: 6px 14px; border-radius: 8px; font-size: 0.85rem; font-weight: 700; border: 1px solid {sev_color};">
@@ -121,17 +120,15 @@ if len(sat_options) > 0:
     """, unsafe_allow_html=True)
     
     if score == 0:
-        st.success("Target is operating within nominal orbital parameters. No anomalous behaviour detected across statistical, structural, or temporal models.")
+        st.success("Target is operating within nominal orbital parameters. No anomalous behaviour detected across statistical or structural models.")
     else:
         reasons = []
         if sat['ml_flag']: reasons.append("statistical deviation from its nominal orbital regime")
         if sat['dm_flag']: reasons.append("severe topological isolation from its structural neighborhood")
-        if sat['temporal_flag']: reasons.append("an anomalous recent orbital maneuver or shift")
         
         reason_text = "The system flagged this spacecraft due to "
         if len(reasons) == 1: reason_text += reasons[0] + "."
-        elif len(reasons) == 2: reason_text += reasons[0] + " and " + reasons[1] + "."
-        else: reason_text += reasons[0] + ", " + reasons[1] + ", and " + reasons[2] + "."
+        else: reason_text += reasons[0] + " and " + reasons[1] + "."
             
         st.warning(f"**Diagnostic Report:** {reason_text}")
         
@@ -139,10 +136,9 @@ if len(sat_options) > 0:
     
     # --- Backend Technical Details Dropdown ---
     with st.expander("View Subsystem Telemetry (Technical)"):
-        c1, c2, c3 = st.columns(3)
+        c1, c2 = st.columns(2)
         c1.metric("Statistical Subsystem (ML)", "Flagged" if sat['ml_flag'] else "Nominal", f"Score: {sat['ml_anomaly_score']:.3f}" if 'ml_anomaly_score' in sat else "")
         c2.metric("Topology Subsystem (DM)", "Flagged" if sat['dm_flag'] else "Nominal", f"In-Degree: {sat['incoming_neighbor_count']}" if 'incoming_neighbor_count' in sat else "")
-        c3.metric("Behavioral Subsystem (Temp)", "Flagged" if sat['temporal_flag'] else "Nominal", f"Δa: {sat['latest_delta_a']:.4f} km" if pd.notnull(sat['latest_delta_a']) else "")
         
 else:
     st.info("No spacecraft found matching the criteria.")

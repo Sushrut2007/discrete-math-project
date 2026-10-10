@@ -731,98 +731,9 @@ Instead, the project uses the terms:
 
 ---
 
-# Part J — Temporal Analysis
+# Part J — Putting Everything Together
 
-## 29. Why a Single Snapshot is Not Enough
-
-A current snapshot tells us about the satellite's current orbital state.
-
-It does not directly tell us whether the satellite recently changed.
-
-For example:
-
-```text
-Current state:
-Unusual orbit
-```
-
-does not tell us whether:
-
-```text
-The satellite has always had this orbit
-```
-
-or:
-
-```text
-The satellite recently moved into this orbit
-```
-
-Temporal snapshots provide additional context.
-
----
-
-## 30. Orbital Changes
-
-For two observations of the same satellite:
-
-```text
-Δa = a₂ - a₁
-
-Δe = e₂ - e₁
-
-Δi = i₂ - i₁
-```
-
-The elapsed time between the observations should also be considered.
-
-For example:
-
-```text
-Δa_rate = (a₂ - a₁) / Δt
-```
-
-where:
-
-```text
-Δt = elapsed time in days
-```
-
-This allows changes from different observation intervals to be compared more consistently.
-
----
-
-## 31. Temporal Anomaly Detection
-
-The temporal question is:
-
-> Did this satellite change unusually compared with comparable satellites?
-
-The system therefore compares orbital changes within an appropriate orbital population.
-
-For example:
-
-```text
-Satellite group
-      ↓
-Typical change patterns
-      ↓
-Compare selected satellite
-      ↓
-Unusual change?
-```
-
-A small altitude decrease should not automatically be classified as an anomaly.
-
-Some satellites naturally experience orbital changes.
-
-The important question is whether the observed change is unusual relative to comparable observations.
-
----
-
-# Part K — Putting Everything Together
-
-## 32. Complete Technical Chain
+## 29. Complete Technical Chain
 
 The complete technical logic is:
 
@@ -847,13 +758,6 @@ Current-state anomaly      Graph evidence
 │                             │
 └──────────────┬──────────────┘
                │
-               +
-               │
-        Temporal snapshots
-               ↓
-        Δa, Δe, Δi
-               ↓
-       Temporal analysis
                ↓
       Evidence integration
                ↓
@@ -862,23 +766,19 @@ Current-state anomaly      Graph evidence
 
 ---
 
-## 33. Final Interpretation
+## 30. Final Interpretation
 
 The system can produce interpretations such as:
 
-### No significant anomaly detected
+### 0: No significant anomaly detected
 
-The available evidence does not indicate a significant unusual orbital state or recent change.
+The available evidence does not indicate a significant unusual orbital state from either component.
 
-### Rare orbit type
+### 1: Rare orbit type
 
-The current orbital state is unusual compared with comparable satellites, while recent change does not appear unusual.
+The current orbital state is unusual according to one component.
 
-### Notable orbital change
-
-The current state may not be unusual, but the recent orbital change is unusual.
-
-### Requires investigation
+### 2: Requires investigation
 
 Multiple sources of evidence indicate that the satellite deserves further examination.
 
@@ -888,13 +788,13 @@ They do not establish that a satellite is malfunctioning or dangerous.
 
 ---
 
-## 34. Important Distinctions
+## 31. Important Distinctions
 
 The following concepts must not be confused:
 
 | Concept               | Meaning                                             |
 | --------------------- | --------------------------------------------------- |
-| Orbital anomaly       | Statistically unusual orbital observation or change |
+| Orbital anomaly       | Statistically unusual orbital observation           |
 | Orbital similarity    | Similarity in selected orbital features             |
 | Physical proximity    | Actual spatial distance between satellites          |
 | Conjunction           | A predicted close approach in space and time        |
@@ -907,12 +807,10 @@ It does not perform conjunction prediction or collision-probability calculation.
 
 ---
 
-## 35. Key Takeaway
+## 32. Key Takeaway
 
 The project's technical idea can be summarized as:
 
-> **Machine Learning detects unusual orbital patterns, while Discrete Mathematics represents the relationships between satellites and provides structural context. Temporal snapshots add recent-change information.**
+> **Machine Learning detects unusual orbital patterns, while Discrete Mathematics represents the relationships between satellites and provides structural context.**
 
-The three components are then integrated to produce an explainable anomaly-detection result.
-
-
+The two components are then integrated to produce an explainable anomaly-detection result.

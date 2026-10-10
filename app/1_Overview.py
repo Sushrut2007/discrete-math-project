@@ -84,7 +84,7 @@ st.markdown("<p style='color: #8B949E; font-size: 1.1rem; margin-bottom: 30px;'>
 counts = df['anomaly_score'].value_counts()
 
 # --- Operational Snapshot ---
-st.markdown("### 📡 Operational Snapshot")
+st.markdown("### Operational Snapshot")
 st.markdown('<div class="sub-glow"></div>', unsafe_allow_html=True)
 
 m_col1, m_col2, m_col3, m_col4 = st.columns(4)
@@ -108,7 +108,7 @@ with m_col2:
 with m_col3:
     st.markdown(f"""
     <div class="glass-card">
-        <div class="premium-metric-value" style="background: linear-gradient(135deg, #fbbf24 0%, #f59e0b 100%); -webkit-background-clip: text; color: transparent;">{counts.get(1, 0) + counts.get(2, 0):,}</div>
+        <div class="premium-metric-value" style="background: linear-gradient(135deg, #fbbf24 0%, #f59e0b 100%); -webkit-background-clip: text; color: transparent;">{counts.get(1, 0):,}</div>
         <div class="premium-metric-label">Active Warnings</div>
     </div>
     """, unsafe_allow_html=True)
@@ -116,7 +116,7 @@ with m_col3:
 with m_col4:
     st.markdown(f"""
     <div class="glass-card" style="border-left: 2px solid #ef4444;">
-        <div class="premium-metric-value" style="background: linear-gradient(135deg, #f87171 0%, #ef4444 100%); -webkit-background-clip: text; color: transparent;">{counts.get(3, 0):,}</div>
+        <div class="premium-metric-value" style="background: linear-gradient(135deg, #f87171 0%, #ef4444 100%); -webkit-background-clip: text; color: transparent;">{counts.get(2, 0):,}</div>
         <div class="premium-metric-label">Critical Alerts</div>
     </div>
     """, unsafe_allow_html=True)
@@ -127,13 +127,13 @@ st.markdown("<br>", unsafe_allow_html=True)
 left_col, right_col = st.columns([1.5, 1])
 
 with left_col:
-    st.markdown("#### 🌍 Catalog Anomaly Distribution")
+    st.markdown("#### Catalog Anomaly Distribution")
     st.markdown('<div class="sub-glow"></div>', unsafe_allow_html=True)
     
     with st.container():
-        score_df = pd.DataFrame({'Alert Level': ['Nominal', 'Low Warning', 'High Warning', 'Critical'], 'Count': [counts.get(i, 0) for i in range(4)]})
+        score_df = pd.DataFrame({'Alert Level': ['Nominal', 'Warning', 'Critical'], 'Count': [counts.get(i, 0) for i in range(3)]})
         fig = px.bar(score_df, x='Alert Level', y='Count', text='Count',
-                     color='Alert Level', color_discrete_sequence=['#22c55e', '#fbbf24', '#f97316', '#ef4444'])
+                     color='Alert Level', color_discrete_sequence=['#22c55e', '#fbbf24', '#ef4444'])
         fig.update_traces(textposition='outside', marker_line_width=0)
         fig.update_layout(
             template="plotly_dark", paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)',
@@ -143,7 +143,7 @@ with left_col:
         st.plotly_chart(fig, use_container_width=True)
 
 with right_col:
-    st.markdown("#### 🧪 System Status")
+    st.markdown("#### System Status")
     st.markdown('<div class="sub-glow"></div>', unsafe_allow_html=True)
     
     st.markdown(f"""
@@ -162,7 +162,7 @@ with right_col:
     st.markdown(f"""
     <div class="glass-card" style="margin-top: 10px;">
         <p style="font-size: 0.85rem; color: #cbd5e1; line-height: 1.5; margin-bottom: 0px;">
-            The system evaluates spacecraft telemetry using three independent models: Statistical state distribution, orbital topology (neighborhood), and recent maneuver history. An object receives a <b>Critical alert</b> only when all three systems independently detect anomalous behaviour.
+            The system evaluates spacecraft telemetry using two independent models: Statistical state distribution and orbital topology (neighborhood). An object receives a <b>Critical alert</b> when both systems independently detect anomalous behaviour.
         </p>
     </div>
     """, unsafe_allow_html=True)
