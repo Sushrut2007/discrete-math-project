@@ -10,17 +10,18 @@ if str(project_root) not in sys.path:
 from src.data.constants import PROCESSED_DIR
 from src.data.snapshot_loader import load_latest_data
 from src.features.preprocess import clean_raw_data, standardize_features, DEFAULT_FEATURE_COLUMNS
-from src.features.orbital_features import add_orbital_features
+from src.features.orbital_features import add_orbital_features, filter_leo_satellites
 
 
-def prepare_features(df=None, feature_cols=None):
+def prepare_features(df=None, feature_cols=None, filter_leo=True):
     """
     Main pipeline function for this branch:
     1. Loads the latest raw data (if df is not provided)
     2. Cleans and validates raw satellite rows
     3. Calculates derived orbital features (a, period, apogee, perigee, speed, height)
-    4. Standardizes numerical features for later ML and Graph analysis
-    5. Preserves all identifying fields (NORAD_CAT_ID, OBJECT_NAME, EPOCH)
+    4. Filters to Low Earth Orbit (LEO: altitude 100-2000 km) if filter_leo=True
+    5. Standardizes numerical features for later ML and Graph analysis
+    6. Preserves all identifying fields (NORAD_CAT_ID, OBJECT_NAME, EPOCH)
 
     Returns:
         processed_df: Fully prepared dataframe
@@ -37,6 +38,11 @@ def prepare_features(df=None, feature_cols=None):
     # Step 2: Add orbital features
     orbital_df = add_orbital_features(cleaned_df)
     print("Added orbital features: period, semi_major_axis, orbit_height, perigee, apogee, orbital_speed")
+
+    # Step 2b: Filter to Low Earth Orbit (LEO)
+    if filter_leo:
+        orbital_df = filter_leo_satellites(orbital_df)
+        print(f"Filtered to LEO (< 2000 km): {len(orbital_df)} satellites retained")
 
     # Step 3: Standardize core numerical features
     processed_df, scaler_params = standardize_features(orbital_df, feature_cols=feature_cols)

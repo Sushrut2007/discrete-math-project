@@ -23,6 +23,7 @@ from src.features.orbital_features import (
     calculate_apogee,
     calculate_orbital_speed,
     add_orbital_features,
+    filter_leo_satellites,
     EARTH_RADIUS_KM
 )
 from src.features.feature_pipeline import prepare_features
@@ -143,11 +144,24 @@ class TestOrbitalFeatures(unittest.TestCase):
             new_scaled["std_semi_major_axis"].values
         )
 
+    def test_filter_leo_satellites(self):
+        cleaned = clean_raw_data(self.sample_data)
+        featured = add_orbital_features(cleaned)
+        leo_only = filter_leo_satellites(featured)
+        self.assertEqual(len(leo_only), 1)
+        self.assertEqual(leo_only.iloc[0]["NORAD_CAT_ID"], 25544)
+
     def test_prepare_features_pipeline(self):
-        result_df, params = prepare_features(self.sample_data)
-        self.assertEqual(len(result_df), 2)
+        # Default filter_leo=True filters out GEO and keeps only LEO
+        result_df, params = prepare_features(self.sample_data, filter_leo=True)
+        self.assertEqual(len(result_df), 1)
+        self.assertEqual(result_df.iloc[0]["NORAD_CAT_ID"], 25544)
         self.assertIn("std_semi_major_axis", result_df.columns)
         self.assertIn("orbital_speed", result_df.columns)
+
+        # Disabling filter_leo retains all valid satellites
+        result_all, _ = prepare_features(self.sample_data, filter_leo=False)
+        self.assertEqual(len(result_all), 2)
 
 
 if __name__ == "__main__":
