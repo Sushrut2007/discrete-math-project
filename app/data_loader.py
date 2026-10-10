@@ -37,3 +37,19 @@ def load_full_data():
     df['anomaly_score'] = df['anomaly_score'].fillna(0).astype(int)
     
     return df
+
+def rerun_full_pipeline():
+    """Executes the full pipeline: Features -> ML -> DM Graph -> Integration."""
+    from src.features.feature_pipeline import process_and_save_latest_features
+    from src.ml.ml_pipeline import run_ml_pipeline
+    from src.dm.graph_pipeline import run_graph_pipeline
+    from src.integration.integration_pipeline import run_integration_pipeline
+    
+    process_and_save_latest_features()
+    run_ml_pipeline()
+    run_graph_pipeline()
+    final_df = run_integration_pipeline()
+    
+    st.cache_data.clear()
+    return final_df
+

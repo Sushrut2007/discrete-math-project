@@ -1,168 +1,178 @@
 import streamlit as st
 import pandas as pd
 import plotly.express as px
-from datetime import datetime
-from data_loader import load_full_data
+from data_loader import load_full_data, rerun_full_pipeline
+from theme import apply_theme, render_metric_card, render_sidebar, get_plotly_layout
 
-st.set_page_config(page_title="Orbital Anomaly Overview", layout="wide", initial_sidebar_state="expanded")
+st.set_page_config(
+    page_title="Orbital Anomaly Radar · Overview",
+    page_icon="🛰️",
+    layout="wide",
+    initial_sidebar_state="expanded"
+)
+
+apply_theme()
 df = load_full_data()
+
 if df.empty:
-    st.error("SYSTEM ERROR: Processed data files are missing. Cannot load catalog.")
+    st.error("System Error: Processed data files are missing. Please verify the data directory.")
     st.stop()
 
-# --- Custom Styling (SpaceDebrisRadar.AI Aesthetic) ---
-st.markdown("""
-<style>
-    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
-    .stApp { font-family: 'Inter', sans-serif; }
-    
-    .glass-card {
-        background: linear-gradient(145deg, rgba(30, 35, 45, 0.7), rgba(20, 25, 30, 0.9));
-        border: 1px solid rgba(255, 255, 255, 0.05);
-        border-radius: 12px;
-        padding: 20px;
-        margin-bottom: 20px;
-        box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.3);
-    }
-    
-    .premium-metric-value {
-        font-size: 2.5rem;
-        font-weight: 700;
-        line-height: 1;
-        margin-bottom: 8px;
-        color: #e0e0e8;
-    }
-    
-    .premium-metric-label {
-        font-size: 0.85rem;
-        color: #8B949E;
-        text-transform: uppercase;
-        letter-spacing: 0.1em;
-        font-weight: 600;
-    }
-    
-    .sub-glow {
-        height: 2px;
-        width: 60px;
-        background: linear-gradient(90deg, #00d4ff, transparent);
-        margin-bottom: 20px;
-    }
-    
-    .status-pulse {
-        display: inline-block;
-        width: 10px;
-        height: 10px;
-        background: #10b981;
-        border-radius: 50%;
-        margin-right: 8px;
-        box-shadow: 0 0 0 0 rgba(16, 185, 129, 1);
-        animation: pulse-green 2s infinite;
-    }
-    
-    @keyframes pulse-green {
-        0% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.7); }
-        70% { transform: scale(1); box-shadow: 0 0 0 10px rgba(16, 185, 129, 0); }
-        100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(16, 185, 129, 0); }
-    }
-    
-    /* Header Gradient */
-    .title-grad {
-        background: -webkit-linear-gradient(0deg, #00d4ff, #7c3aed);
-        -webkit-background-clip: text;
-        -webkit-text-fill-color: transparent;
-        font-size: 3.5rem;
-        font-weight: 800;
-        margin-bottom: 0px;
-        padding-bottom: 0px;
-    }
-</style>
-""", unsafe_allow_html=True)
+# Sidebar
+render_sidebar(df)
+with st.sidebar:
+    with st.expander("Pipeline Controls", expanded=False):
+        st.caption("Re-run feature extraction, ML clustering, DM graph construction, and score integration on the active catalog.")
+        if st.button("Execute Pipeline", type="primary", use_container_width=True):
+            with st.spinner("Processing orbital pipeline..."):
+                try:
+                    rerun_full_pipeline()
+                    st.success("Pipeline executed successfully!")
+                    st.rerun()
+                except Exception as e:
+                    st.error(f"Pipeline error: {e}")
 
-st.markdown("<h1 class='title-grad'>ORBITAL ANOMALY RADAR</h1>", unsafe_allow_html=True)
-st.markdown("<p style='color: #8B949E; font-size: 1.1rem; margin-bottom: 30px;'>Low Earth Orbit & Deep Space Traffic Monitoring System.</p>", unsafe_allow_html=True)
+# Header
+st.markdown('<div class="page-title">Orbital Anomaly Radar</div>', unsafe_allow_html=True)
+st.markdown('<div class="page-subtitle">Dual-method satellite anomaly detection powered by Machine Learning and Discrete Mathematics.</div>', unsafe_allow_html=True)
+st.markdown('<div class="accent-bar"></div>', unsafe_allow_html=True)
 
+# Top KPIs
 counts = df['anomaly_score'].value_counts()
+n_total = len(df)
+n_score0 = counts.get(0, 0)
+n_score1 = counts.get(1, 0)
+n_score2 = counts.get(2, 0)
 
-# --- Operational Snapshot ---
-st.markdown("### Operational Snapshot")
-st.markdown('<div class="sub-glow"></div>', unsafe_allow_html=True)
+kpi1, kpi2, kpi3, kpi4 = st.columns(4)
+with kpi1:
+    render_metric_card("Tracked Satellites", f"{n_total:,}", "CelesTrak Active Elements", "#f8fafc", "#3b82f6")
+with kpi2:
+    pct0 = (n_score0 / n_total) * 100
+    render_metric_card("Score 0 · Nominal", f"{n_score0:,}", f"{pct0:.1f}% of catalog", "#34d399", "#10b981")
+with kpi3:
+    pct1 = (n_score1 / n_total) * 100
+    render_metric_card("Score 1 · Review", f"{n_score1:,}", f"{pct1:.1f}% single model flag", "#fbbf24", "#f59e0b")
+with kpi4:
+    pct2 = (n_score2 / n_total) * 100
+    render_metric_card("Score 2 · High Priority", f"{n_score2:,}", f"{pct2:.2f}% dual-flagged", "#f87171", "#ef4444")
 
-m_col1, m_col2, m_col3, m_col4 = st.columns(4)
+st.markdown("<br>", unsafe_allow_html=True)
 
-with m_col1:
-    st.markdown(f"""
-    <div class="glass-card">
-        <div class="premium-metric-value">{len(df):,}</div>
-        <div class="premium-metric-label">Tracked Objects</div>
-    </div>
-    """, unsafe_allow_html=True)
+# Main Grid
+col_left, col_right = st.columns([1.5, 1])
 
-with m_col2:
-    st.markdown(f"""
-    <div class="glass-card">
-        <div class="premium-metric-value" style="background: linear-gradient(135deg, #4ade80 0%, #22c55e 100%); -webkit-background-clip: text; color: transparent;">{counts.get(0, 0):,}</div>
-        <div class="premium-metric-label">Nominal Status</div>
-    </div>
-    """, unsafe_allow_html=True)
+with col_left:
+    st.markdown("#### Anomaly Score Distribution")
+    dist_df = pd.DataFrame({
+        'Score': ['Score 0 (Nominal)', 'Score 1 (Single Flag)', 'Score 2 (Dual Flag)'],
+        'Count': [n_score0, n_score1, n_score2],
+        'Color': ['#10b981', '#f59e0b', '#ef4444'],
+        'Description': [
+            'Neither ML nor DM flagged',
+            'Either ML or DM flagged',
+            'Both ML and DM flagged'
+        ]
+    })
+    
+    fig = px.bar(
+        dist_df,
+        x='Score',
+        y='Count',
+        text='Count',
+        color='Score',
+        color_discrete_map={
+            'Score 0 (Nominal)': '#10b981',
+            'Score 1 (Single Flag)': '#f59e0b',
+            'Score 2 (Dual Flag)': '#ef4444'
+        }
+    )
+    fig.update_traces(
+        texttemplate='%{text:,}',
+        textposition='outside',
+        marker_line_width=0,
+        hovertemplate='<b>%{x}</b><br>Count: %{y:,}<extra></extra>'
+    )
+    layout = get_plotly_layout(height=280)
+    layout['showlegend'] = False
+    layout['yaxis']['title'] = "Satellite Count"
+    layout['xaxis']['title'] = ""
+    fig.update_layout(layout)
+    st.plotly_chart(fig, use_container_width=True)
 
-with m_col3:
-    st.markdown(f"""
-    <div class="glass-card">
-        <div class="premium-metric-value" style="background: linear-gradient(135deg, #fbbf24 0%, #f59e0b 100%); -webkit-background-clip: text; color: transparent;">{counts.get(1, 0):,}</div>
-        <div class="premium-metric-label">Active Warnings</div>
-    </div>
-    """, unsafe_allow_html=True)
-
-with m_col4:
-    st.markdown(f"""
-    <div class="glass-card" style="border-left: 2px solid #ef4444;">
-        <div class="premium-metric-value" style="background: linear-gradient(135deg, #f87171 0%, #ef4444 100%); -webkit-background-clip: text; color: transparent;">{counts.get(2, 0):,}</div>
-        <div class="premium-metric-label">Critical Alerts</div>
+with col_right:
+    st.markdown("#### Evidence Synthesis Matrix")
+    st.markdown("""
+    <div style="background: #0f172a; border: 1px solid rgba(255,255,255,0.08); border-radius: 10px; padding: 18px;">
+        <table style="width: 100%; border-collapse: collapse; font-size: 0.85rem; color: #cbd5e1;">
+            <thead>
+                <tr style="border-bottom: 1px solid rgba(255,255,255,0.1); text-align: left;">
+                    <th style="padding: 8px 6px;">Score</th>
+                    <th style="padding: 8px 6px;">Evidence Criteria</th>
+                    <th style="padding: 8px 6px;">Catalog Action</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr style="border-bottom: 1px solid rgba(255,255,255,0.04);">
+                    <td style="padding: 8px 6px;"><span class="score-badge score-0">0</span></td>
+                    <td style="padding: 8px 6px;">Neither ML nor DM flagged</td>
+                    <td style="padding: 8px 6px; color: #34d399;">Nominal routine tracking</td>
+                </tr>
+                <tr style="border-bottom: 1px solid rgba(255,255,255,0.04);">
+                    <td style="padding: 8px 6px;"><span class="score-badge score-1">1</span></td>
+                    <td style="padding: 8px 6px;">Flagged by either ML or DM</td>
+                    <td style="padding: 8px 6px; color: #fbbf24;">Moderate review list</td>
+                </tr>
+                <tr>
+                    <td style="padding: 8px 6px;"><span class="score-badge score-2">2</span></td>
+                    <td style="padding: 8px 6px;">Flagged by <b>both</b> ML and DM</td>
+                    <td style="padding: 8px 6px; color: #f87171; font-weight: 600;">High priority investigation</td>
+                </tr>
+            </tbody>
+        </table>
+        <div style="font-size: 0.75rem; color: #64748b; margin-top: 12px; line-height: 1.4;">
+            <b>Interpretation Note:</b> The score indicates the tally of concordant methods, not a probability of collision or failure. ML and DM share orbital features and are complementary indicators.
+        </div>
     </div>
     """, unsafe_allow_html=True)
 
 st.markdown("<br>", unsafe_allow_html=True)
 
-# --- Core Content ---
-left_col, right_col = st.columns([1.5, 1])
+# Catalog Orbit Breakdown
+st.markdown("#### Orbital Regime Distribution")
+col_reg1, col_reg2, col_reg3 = st.columns(3)
 
-with left_col:
-    st.markdown("#### Catalog Anomaly Distribution")
-    st.markdown('<div class="sub-glow"></div>', unsafe_allow_html=True)
-    
-    with st.container():
-        score_df = pd.DataFrame({'Alert Level': ['Nominal', 'Warning', 'Critical'], 'Count': [counts.get(i, 0) for i in range(3)]})
-        fig = px.bar(score_df, x='Alert Level', y='Count', text='Count',
-                     color='Alert Level', color_discrete_sequence=['#22c55e', '#fbbf24', '#ef4444'])
-        fig.update_traces(textposition='outside', marker_line_width=0)
-        fig.update_layout(
-            template="plotly_dark", paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)',
-            xaxis_title="", yaxis_title="Number of Spacecraft", showlegend=False,
-            height=300, margin=dict(l=0, r=0, t=10, b=0)
-        )
-        st.plotly_chart(fig, use_container_width=True)
+leo_count = len(df[df['orbit_height'] < 2000])
+meo_count = len(df[(df['orbit_height'] >= 2000) & (df['orbit_height'] < 35000)])
+geo_count = len(df[df['orbit_height'] >= 35000])
 
-with right_col:
-    st.markdown("#### System Status")
-    st.markdown('<div class="sub-glow"></div>', unsafe_allow_html=True)
-    
-    st.markdown(f"""
-    <div class="glass-card" style="padding: 15px;">
-        <div style="display: flex; align-items: center;">
-            <div class="status-pulse"></div>
-            <div style="font-weight: 600; color: #f8fafc; font-size: 0.9rem;">System Operational</div>
-        </div>
-        <div style="font-size: 0.75rem; color: #64748b; margin-top: 8px; margin-left: 18px;">
-            Last sync epoch: {str(df['EPOCH'].iloc[0])[:10] if 'EPOCH' in df.columns else 'N/A'} UTC<br>
-            Pipeline Status: Nominal
-        </div>
-    </div>
-    """, unsafe_allow_html=True)
-    
-    st.markdown(f"""
-    <div class="glass-card" style="margin-top: 10px;">
-        <p style="font-size: 0.85rem; color: #cbd5e1; line-height: 1.5; margin-bottom: 0px;">
-            The system evaluates spacecraft telemetry using two independent models: Statistical state distribution and orbital topology (neighborhood). An object receives a <b>Critical alert</b> when both systems independently detect anomalous behaviour.
-        </p>
-    </div>
-    """, unsafe_allow_html=True)
+with col_reg1:
+    render_metric_card("LEO Spacecraft", f"{leo_count:,}", "Altitude < 2,000 km", "#60a5fa")
+with col_reg2:
+    render_metric_card("MEO Spacecraft", f"{meo_count:,}", "2,000 km – 35,000 km", "#a78bfa")
+with col_reg3:
+    render_metric_card("GEO Spacecraft", f"{geo_count:,}", "Altitude ≥ 35,000 km", "#f472b6")
+
+# Quick scatter overview
+st.markdown("#### Altitude vs Inclination Spectrum")
+sample_df = df.sample(n=min(3000, len(df)), random_state=42)
+fig_scatter = px.scatter(
+    sample_df,
+    x='orbit_height',
+    y='INCLINATION',
+    color='anomaly_score',
+    color_continuous_scale=[(0, '#10b981'), (0.5, '#f59e0b'), (1, '#ef4444')],
+    hover_data=['NORAD_CAT_ID', 'OBJECT_NAME', 'anomaly_score'],
+    labels={'orbit_height': 'Orbit Altitude (km)', 'INCLINATION': 'Inclination (deg)', 'anomaly_score': 'Score'},
+)
+fig_scatter.update_traces(marker=dict(size=4, opacity=0.75))
+scatter_layout = get_plotly_layout(height=360)
+scatter_layout['coloraxis_colorbar'] = dict(
+    title="Score",
+    tickvals=[0, 1, 2],
+    ticktext=["0 (Nominal)", "1 (Review)", "2 (Priority)"],
+    len=0.7
+)
+fig_scatter.update_layout(scatter_layout)
+st.plotly_chart(fig_scatter, use_container_width=True)
+st.caption("Displaying 3,000 sampled satellites for responsive rendering. Outliers in high altitudes and inclinations are highlighted.")
