@@ -1,9 +1,70 @@
 import pandas as pd
 import numpy as np
 
-def get_operator_explanation(sat, df):
+def get_ml_reasons(sat):
     """
-    Returns plain, simple reasons why a satellite was flagged.
+    Returns both an intuitive and a technical reason for the ML detector outcome.
+    """
+    ml_flag = int(sat.get('ml_flag', 0))
+    score = float(sat.get('ml_anomaly_score', 0.0))
+    cluster_id = sat.get('cluster_id', 0)
+    ecc = float(sat.get('ECCENTRICITY', 0.0))
+    alt = float(sat.get('orbit_height', 0.0))
+    inc = float(sat.get('INCLINATION', 0.0))
+
+    if ml_flag == 0:
+        intuitive = "Orbits consistently with other satellites in its family."
+        technical = f"Isolation Forest score: {score:.4f} (>= 0, conforming in Group {cluster_id})."
+        return intuitive, technical
+
+    # Flagged: determine dominant physical feature deviation
+    if ecc > 0.02:
+        intuitive = f"Oval-shaped orbit (eccentricity {ecc:.4f} vs typical < 0.005 in this group)."
+    elif alt > 1100:
+        intuitive = f"High altitude ({alt:,.0f} km) well above standard constellation shells."
+    elif alt < 350:
+        intuitive = f"Very low altitude ({alt:,.0f} km) near atmospheric entry boundary."
+    elif inc < 45 or (73 <= inc <= 95):
+        intuitive = f"Uncommon orbital tilt ({inc:.1f}°) outside standard 53° or 97° planes."
+    else:
+        intuitive = "Orbital features sit at the sparse outer edge of this family."
+
+    technical = f"Isolation Forest score: {score:.4f} (< 0 threshold in K-Means Group {cluster_id})."
+    return intuitive, technical
+
+
+def get_dm_reasons(sat, global_mean=0.8306):
+    """
+    Returns both an intuitive and a technical reason for the DM graph detector outcome.
+    """
+    dm_flag = int(sat.get('dm_flag', 0))
+    in_deg = int(sat.get('incoming_neighbor_count', 0))
+    dist = float(sat.get('mean_neighbor_distance', 0.0))
+    alt = float(sat.get('orbit_height', 0.0))
+    inc = float(sat.get('INCLINATION', 0.0))
+
+    if dm_flag == 0:
+        intuitive = "Surrounded by close neighboring satellites in similar orbits."
+        technical = f"Incoming neighbors: {in_deg} | Avg 5-NN distance: {dist:.4f} (<= catalog average {global_mean:.4f})."
+        return intuitive, technical
+
+    # Flagged: explain why in-degree is 0 and distance is high
+    if alt > 1100:
+        intuitive = f"High altitude corridor ({alt:,.0f} km) where satellites are spaced far apart."
+    elif alt < 350:
+        intuitive = f"Low decay orbit ({alt:,.0f} km) with no other satellites nearby."
+    elif inc < 45 or (75 <= inc <= 95):
+        intuitive = f"Uncommon tilt ({inc:.1f}°) placing it in an empty orbital slot."
+    else:
+        intuitive = "Empty orbital corridor with no other satellites flying close nearby."
+
+    technical = f"In-degree = 0 (unreciprocated in directed 5-NN graph) and avg distance = {dist:.4f} > catalog threshold ({global_mean:.4f})."
+    return intuitive, technical
+
+
+def get_operator_explanation(sat, df=None):
+    """
+    Returns clear, simple reasons why a satellite was flagged.
     """
     score = int(sat.get('anomaly_score', 0))
     if score == 0:
@@ -56,7 +117,7 @@ def get_operator_explanation(sat, df):
     ml_flag = bool(sat.get('ml_flag', 0))
     cluster_id = sat.get('cluster_id', 'N/A')
     if ml_flag and not any("Oval" in r or "altitude" in r for r in reasons):
-        reasons.append(f"Stands out in its cluster: Isolation Forest marked it as an outlier inside Cluster {cluster_id}.")
+        reasons.append(f"Stands out in its cluster: Isolation Forest marked it as an outlier inside Group {cluster_id}.")
 
     if not reasons:
         reasons.append("Combined factors: Slight differences across height, tilt, and speed made the model flag it.")

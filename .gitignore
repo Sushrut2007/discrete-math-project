@@ -23,6 +23,7 @@ Thumbs.db
 # Temporary files
 *.tmp
 *.log
+~$*
 
 
 # Reference-only project

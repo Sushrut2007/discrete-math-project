@@ -2,6 +2,7 @@ import streamlit as st
 import pandas as pd
 from data_loader import load_full_data
 from theme import apply_theme, render_sidebar, get_badge_html
+from diagnostics import get_ml_reasons, get_dm_reasons
 
 st.set_page_config(
     page_title="Satellite Explorer",
@@ -57,7 +58,7 @@ options = [
     f"[Score {row['anomaly_score']}] NORAD {row['NORAD_CAT_ID']} · {row['OBJECT_NAME']}"
     for _, row in filtered_df.iterrows()
 ]
-selected_option = st.selectbox("Select satellite:", options)
+selected_option = st.selectbox("Select satellite to inspect:", options)
 selected_norad = int(selected_option.split("NORAD ")[1].split(" ·")[0])
 sat = df[df['NORAD_CAT_ID'] == selected_norad].iloc[0]
 
@@ -72,7 +73,7 @@ mu = 398600.4418
 speed_val = (mu / sma_val) ** 0.5 if sma_val > 0 else 7.5
 period_val = (2 * 3.14159265 * (sma_val ** 1.5)) / (mu ** 0.5) / 60 if sma_val > 0 else 95.0
 
-# Satellite Identity Card
+# Identity Card
 score_badge = get_badge_html(score)
 st.markdown(f"""
 <div style="background: #1e293b; border: 1px solid rgba(255, 255, 255, 0.08); border-radius: 6px; padding: 18px 22px; margin-bottom: 20px;">
@@ -113,6 +114,10 @@ with k6:
 
 st.markdown("<br>", unsafe_allow_html=True)
 
+# Get both intuitive and technical reasons
+ml_intuitive, ml_technical = get_ml_reasons(sat)
+dm_intuitive, dm_technical = get_dm_reasons(sat)
+
 # Detector Results Section
 st.markdown("### Detector Results")
 
@@ -130,9 +135,13 @@ with col_ml:
             <span style="font-weight: 600; color: #f8fafc; font-size: 0.95rem;">Machine Learning Result</span>
             <span style="color: {tag_color}; font-weight: 700; font-size: 0.8rem; letter-spacing: 0.05em;">{tag_ml}</span>
         </div>
-        <p style="font-size: 0.88rem; color: #cbd5e1; line-height: 1.5; margin-bottom: 0px;">
-            {"ML flagged this satellite because its orbital features are unusual compared with other satellites in its group." if ml_flagged else "ML did not flag this satellite. Its orbital features are consistent with other satellites in its group."}
-        </p>
+        <div style="font-size: 0.88rem; color: #e2e8f0; line-height: 1.5; margin-bottom: 8px;">
+            <b>Intuitive Explanation:</b><br>
+            {ml_intuitive}
+        </div>
+        <div style="font-size: 0.80rem; color: #94a3b8; line-height: 1.4; border-top: 1px solid rgba(255,255,255,0.06); padding-top: 8px;">
+            <b>Technical Detail:</b> {ml_technical}
+        </div>
     </div>
     """, unsafe_allow_html=True)
 
@@ -148,9 +157,13 @@ with col_dm:
             <span style="font-weight: 600; color: #f8fafc; font-size: 0.95rem;">Discrete Math (Graph) Result</span>
             <span style="color: {tag_color_dm}; font-weight: 700; font-size: 0.8rem; letter-spacing: 0.05em;">{tag_dm}</span>
         </div>
-        <p style="font-size: 0.88rem; color: #cbd5e1; line-height: 1.5; margin-bottom: 0px;">
-            {"DM flagged this satellite because no other satellite selected it among its five nearest orbital-feature neighbours, and its average distance to those neighbours is above the dataset average." if dm_flagged else "DM did not flag this satellite. It has nearby peers in orbital-feature space and is connected to other satellites in the graph."}
-        </p>
+        <div style="font-size: 0.88rem; color: #e2e8f0; line-height: 1.5; margin-bottom: 8px;">
+            <b>Intuitive Explanation:</b><br>
+            {dm_intuitive}
+        </div>
+        <div style="font-size: 0.80rem; color: #94a3b8; line-height: 1.4; border-top: 1px solid rgba(255,255,255,0.06); padding-top: 8px;">
+            <b>Technical Detail:</b> {dm_technical}
+        </div>
     </div>
     """, unsafe_allow_html=True)
 
@@ -166,7 +179,7 @@ if score == 2:
 elif score == 1:
     st.markdown("""
     <div style="background: rgba(245, 158, 11, 0.08); border-left: 3px solid #f59e0b; border-radius: 4px; padding: 12px 16px; font-size: 0.88rem; color: #f8fafc;">
-        <b>One method flagged this satellite.</b> See individual detector results above.
+        <b>One method flagged this satellite.</b> See individual detector cards above.
     </div>
     """, unsafe_allow_html=True)
 else:
