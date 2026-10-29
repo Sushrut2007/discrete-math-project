@@ -97,20 +97,16 @@ st.markdown(f"""
 </div>
 """, unsafe_allow_html=True)
 
-# Orbital Elements Metrics
-k1, k2, k3, k4, k5, k6 = st.columns(6)
+# Orbital Elements Metrics (Key Features)
+k1, k2, k3, k4 = st.columns(4)
 with k1:
     st.metric("Altitude", f"{alt_val:,.1f} km")
 with k2:
-    st.metric("Semi-Major Axis", f"{sma_val:,.1f} km")
-with k3:
     st.metric("Inclination", f"{inc_val:.2f}°")
-with k4:
+with k3:
     st.metric("Eccentricity", f"{ecc_val:.5f}")
-with k5:
+with k4:
     st.metric("Orbital Speed", f"{speed_val:.2f} km/s")
-with k6:
-    st.metric("Orbital Period", f"{period_val:.1f} min")
 
 st.markdown("<br>", unsafe_allow_html=True)
 
