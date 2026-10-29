@@ -61,6 +61,11 @@ def get_graph_indexer(feature_data):
     return nn_model, indices, dists
 
 feats = ['std_semi_major_axis', 'std_eccentricity', 'std_inclination']
+for raw_c, std_c in [('semi_major_axis', 'std_semi_major_axis'), ('ECCENTRICITY', 'std_eccentricity'), ('INCLINATION', 'std_inclination')]:
+    if std_c not in df.columns and raw_c in df.columns:
+        m = df[raw_c].mean()
+        s = df[raw_c].std()
+        df[std_c] = (df[raw_c] - m) / (s if s > 0 else 1.0)
 X = df[feats].to_numpy()
 nn_model, nn_indices, nn_dists = get_graph_indexer(X)
 

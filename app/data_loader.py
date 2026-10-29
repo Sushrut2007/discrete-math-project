@@ -27,7 +27,10 @@ def load_full_data():
     df_ml = df_ml[cols_ml]
     df_ml = df_ml.rename(columns={'anomaly_score': 'ml_anomaly_score'})
     
-    df_dm = pd.read_csv(dm_path)[['NORAD_CAT_ID', 'incoming_neighbor_count', 'mean_neighbor_distance', 'k_nearest_distance']]
+    cols_dm = ['NORAD_CAT_ID', 'incoming_neighbor_count', 'mean_neighbor_distance', 'k_nearest_distance', 'std_semi_major_axis', 'std_eccentricity', 'std_inclination']
+    df_dm_raw = pd.read_csv(dm_path)
+    cols_dm = [c for c in cols_dm if c in df_dm_raw.columns]
+    df_dm = df_dm_raw[cols_dm]
     
     df = pd.merge(df_int, df_ml, on='NORAD_CAT_ID', how='inner')
     df = pd.merge(df, df_dm, on='NORAD_CAT_ID', how='inner', suffixes=('', '_drop'))
