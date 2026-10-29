@@ -13,21 +13,21 @@ def get_ml_reasons(sat):
     inc = float(sat.get('INCLINATION', 0.0))
 
     if ml_flag == 0:
-        intuitive = "Orbits consistently with other satellites in its family."
+        intuitive = "Its orbital features are similar to others in its assigned group."
         technical = f"Isolation Forest score: {score:.4f} (>= 0, conforming in Group {cluster_id})."
         return intuitive, technical
 
     # Flagged: determine dominant physical feature deviation
     if ecc > 0.02:
-        intuitive = f"Oval-shaped orbit (eccentricity {ecc:.4f} vs typical < 0.005 in this group)."
+        intuitive = f"Eccentricity is {ecc:.4f}, compared with the typical value of less than 0.005 stated for this group."
     elif alt > 1100:
-        intuitive = f"High altitude ({alt:,.0f} km) well above standard constellation shells."
+        intuitive = f"Altitude is {alt:,.0f} km, which is high compared with other records in the dataset."
     elif alt < 350:
-        intuitive = f"Very low altitude ({alt:,.0f} km) near atmospheric entry boundary."
+        intuitive = f"Altitude is {alt:,.0f} km, which is low compared with other records in the dataset."
     elif inc < 45 or (73 <= inc <= 95):
-        intuitive = f"Uncommon orbital tilt ({inc:.1f}°) outside standard 53° or 97° planes."
+        intuitive = f"Inclination is {inc:.1f}°, which differs from common values near 53° or 97°."
     else:
-        intuitive = "Orbital features sit at the sparse outer edge of this family."
+        intuitive = "Its orbital features are in a less populated part of its assigned group."
 
     technical = f"Isolation Forest score: {score:.4f} (< 0 threshold in K-Means Group {cluster_id})."
     return intuitive, technical
@@ -44,19 +44,19 @@ def get_dm_reasons(sat, global_mean=0.8306):
     inc = float(sat.get('INCLINATION', 0.0))
 
     if dm_flag == 0:
-        intuitive = "Surrounded by close neighboring satellites in similar orbits."
+        intuitive = "Other satellites selected this satellite as a nearest neighbour in the orbital-feature graph."
         technical = f"Incoming neighbors: {in_deg} | Avg 5-NN distance: {dist:.4f} (<= overall average {global_mean:.4f})."
         return intuitive, technical
 
     # Flagged: explain why in-degree is 0 and distance is high
     if alt > 1100:
-        intuitive = f"High altitude orbit ({alt:,.0f} km) where satellites are spaced far apart."
+        intuitive = f"Altitude is {alt:,.0f} km. Its graph result depends on its neighbour connections and distances in orbital-feature space."
     elif alt < 350:
-        intuitive = f"Low decay orbit ({alt:,.0f} km) with no other satellites nearby."
+        intuitive = f"Altitude is {alt:,.0f} km. Its DM flag depends on graph connections and neighbour distances."
     elif inc < 45 or (75 <= inc <= 95):
-        intuitive = f"Uncommon tilt ({inc:.1f}°) placing it in an empty orbital slot."
+        intuitive = f"Inclination is {inc:.1f}°. Its DM flag depends on the graph rule."
     else:
-        intuitive = "Isolated orbit with no other satellites flying close nearby."
+        intuitive = "No other satellite selected this satellite as one of its five nearest neighbours, and its mean distance to those neighbours is above the dataset-wide mean."
 
     technical = f"In-degree = 0 (unreciprocated in directed 5-NN graph) and avg distance = {dist:.4f} > overall average threshold ({global_mean:.4f})."
     return intuitive, technical
@@ -109,7 +109,7 @@ def get_operator_explanation(sat, df=None):
     dm_flag = bool(sat.get('dm_flag', 0))
     in_deg = int(sat.get('incoming_neighbor_count', 0))
     if dm_flag:
-        reasons.append("No close neighbors: No other satellite has this satellite in its 5 closest neighbors, and its own neighbors are unusually far away.")
+        reasons.append("Zero incoming edges: no other satellite selected this satellite as one of its five nearest neighbours, and its mean distance to those neighbours is above the dataset-wide mean.")
     elif in_deg == 0:
         reasons.append("Outer edge: Sits at the sparse outer edge of its group.")
 

@@ -20,7 +20,7 @@ render_sidebar(df)
 
 # Header
 st.markdown('<div class="page-title">Satellite Explorer</div>', unsafe_allow_html=True)
-st.markdown('<div class="page-subtitle">Search and inspect individual satellites to see detector results, reasons, and orbital features.</div>', unsafe_allow_html=True)
+st.markdown('<div class="page-subtitle">Search for a satellite to view its orbital features, ML and DM results, and flag reasons.</div>', unsafe_allow_html=True)
 
 # Controls
 col_f1, col_f2 = st.columns([1, 2])
@@ -50,7 +50,7 @@ if search_query.strip():
     ]
 
 if len(filtered_df) == 0:
-    st.warning("No satellites match the selected filter or search query.")
+    st.warning("No satellites match the selected filter or search.")
     st.stop()
 
 # Satellite selection dropdown
@@ -58,7 +58,7 @@ options = [
     f"[Score {row['anomaly_score']}] NORAD {row['NORAD_CAT_ID']} · {row['OBJECT_NAME']}"
     for _, row in filtered_df.iterrows()
 ]
-selected_option = st.selectbox("Select satellite to inspect:", options)
+selected_option = st.selectbox("Select satellite:", options)
 selected_norad = int(selected_option.split("NORAD ")[1].split(" ·")[0])
 sat = df[df['NORAD_CAT_ID'] == selected_norad].iloc[0]
 
@@ -154,7 +154,7 @@ with col_dm:
     st.markdown(f"""
     <div style="background: #1e293b; border: 1px solid {border_color_dm}; border-radius: 6px; padding: 16px 20px; height: 100%;">
         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
-            <span style="font-weight: 600; color: #f8fafc; font-size: 0.95rem;">Discrete Math (Graph) Result</span>
+            <span style="font-weight: 600; color: #f8fafc; font-size: 0.95rem;">Discrete Mathematics Graph Result</span>
             <span style="color: {tag_color_dm}; font-weight: 700; font-size: 0.8rem; letter-spacing: 0.05em;">{tag_dm}</span>
         </div>
         <div style="font-size: 0.88rem; color: #e2e8f0; line-height: 1.5; margin-bottom: 8px;">
@@ -173,24 +173,24 @@ st.markdown("<br>", unsafe_allow_html=True)
 if score == 2:
     st.markdown("""
     <div style="background: rgba(239, 68, 68, 0.08); border-left: 3px solid #ef4444; border-radius: 4px; padding: 12px 16px; font-size: 0.88rem; color: #f8fafc;">
-        <b>Both methods flagged this satellite.</b> Review this satellite first.
+        <b>Both methods flagged this satellite.</b> Review its results first.
     </div>
     """, unsafe_allow_html=True)
 elif score == 1:
     st.markdown("""
     <div style="background: rgba(245, 158, 11, 0.08); border-left: 3px solid #f59e0b; border-radius: 4px; padding: 12px 16px; font-size: 0.88rem; color: #f8fafc;">
-        <b>One method flagged this satellite.</b> See individual detector cards above.
+        <b>One method flagged this satellite.</b> Check the individual results above.
     </div>
     """, unsafe_allow_html=True)
 else:
     st.markdown("""
     <div style="background: rgba(16, 185, 129, 0.08); border-left: 3px solid #10b981; border-radius: 4px; padding: 12px 16px; font-size: 0.88rem; color: #f8fafc;">
-        <b>Neither method flagged this satellite.</b> It operates within standard orbital ranges.
+        <b>Neither method flagged this satellite.</b>
     </div>
     """, unsafe_allow_html=True)
 
 # Technical Details Expander
-with st.expander("Technical details"):
+with st.expander("Technical Details"):
     c_t1, c_t2, c_t3, c_t4, c_t5 = st.columns(5)
     with c_t1:
         st.metric("Assigned Orbital Group", f"Group {sat.get('cluster_id', 'N/A')}")
@@ -199,8 +199,8 @@ with st.expander("Technical details"):
     with c_t3:
         st.metric("Incoming Neighbours", f"{int(sat.get('incoming_neighbor_count', 0))}")
     with c_t4:
-        st.metric("Avg Neighbour Distance", f"{sat.get('mean_neighbor_distance', 0):.4f}")
+        st.metric("Mean Neighbour Distance", f"{sat.get('mean_neighbor_distance', 0):.4f}")
     with c_t5:
-        st.metric("Dataset Avg Distance", f"{sat.get('global_mean_dist', 0):.4f}")
+        st.metric("Dataset Mean Distance", f"{sat.get('global_mean_dist', 0):.4f}")
     
-    st.caption("Note: Neighbour relationships are calculated in normalized orbital-feature space, not physical distance in space.")
+    st.caption("Graph neighbours are selected using normalized orbital features, not physical distance between satellites.")

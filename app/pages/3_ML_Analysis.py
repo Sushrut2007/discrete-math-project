@@ -19,8 +19,8 @@ if df.empty:
 render_sidebar(df)
 
 # Header
-st.markdown('<div class="page-title">Machine Learning Detector Analysis</div>', unsafe_allow_html=True)
-st.markdown('<div class="page-subtitle">How K-Means groups orbital shells and how Isolation Forest detects outliers within each group.</div>', unsafe_allow_html=True)
+st.markdown('<div class="page-title">Machine Learning Analysis</div>', unsafe_allow_html=True)
+st.markdown('<div class="page-subtitle">K-Means groups satellites by orbital features, and Isolation Forest identifies outliers within each group.</div>', unsafe_allow_html=True)
 
 # KPIs
 n_total = len(df)
@@ -31,11 +31,11 @@ n_clusters = int(df['cluster_id'].nunique())
 
 k1, k2, k3, k4 = st.columns(4)
 with k1:
-    render_metric_card("Total Analysed", f"{n_total:,}", "Tracked LEO satellites", "#f8fafc")
+    render_metric_card("Total Analysed", f"{n_total:,}", "Satellites in the dataset", "#f8fafc")
 with k2:
     render_metric_card("Flagged by ML", f"{n_ml_flagged:,}", f"{pct_flagged:.2f}% of all satellites", "#f87171", "#ef4444")
 with k3:
-    render_metric_card("Conforming Orbits", f"{n_ml_normal:,}", f"{100 - pct_flagged:.2f}% standard paths", "#34d399", "#10b981")
+    render_metric_card("Not Flagged by ML", f"{n_ml_normal:,}", f"{100 - pct_flagged:.2f}% of all satellites", "#34d399", "#10b981")
 with k4:
     render_metric_card("Orbital Groups", f"{n_clusters}", "K-Means clusters (k=5)", "#818cf8")
 
@@ -55,19 +55,19 @@ cluster_summary = df.groupby('cluster_id').agg(
 cluster_summary['Anomaly_Rate'] = (cluster_summary['ML_Anomalies'] / cluster_summary['Total_Satellites']) * 100
 
 cluster_names = {
-    2: "Mid-Tilt Constellations (Starlink / OneWeb / ISS)",
-    0: "Sun-Synchronous Polar (Earth Observation)",
-    1: "Upper LEO Polar (Communication & Navigation)",
-    4: "Intermediate Altitude Shell",
-    3: "Elliptical Transfer Shell"
+    2: "Mid-Inclination Group",
+    0: "Sun-Synchronous and Near-Polar Group",
+    1: "Higher-Altitude Polar Group",
+    4: "Intermediate-Altitude Group",
+    3: "Higher-Eccentricity Group"
 }
 
 cluster_reasons = {
-    2: "Oval orbits or altitude offsets outside the 550 km plane",
-    0: "Non-polar inclinations or high eccentricities",
-    1: "Unusual tilts or altitudes far above 1,200 km",
-    4: "Uncommon inclination (76.7°) outside dense orbits",
-    3: "High orbital eccentricity (> 0.04)"
+    2: "Unusual eccentricity or altitude compared with other records in this group.",
+    0: "Unusual inclination or eccentricity compared with other records in this group.",
+    1: "Unusual inclination or altitude compared with other records in this group.",
+    4: "Inclination values that differ from others in this group.",
+    3: "Higher eccentricity compared with other records in this group."
 }
 
 cluster_summary['Group_Name'] = cluster_summary['cluster_id'].map(cluster_names)
@@ -79,8 +79,8 @@ cluster_display = cluster_summary[[
 ]].sort_values(by='Total_Satellites', ascending=False)
 
 cluster_display.columns = [
-    'Group ID', 'Orbital Family Name', 'Total Satellites', 'Flagged Outliers',
-    'Avg Altitude (km)', 'Avg Tilt (°)', 'Avg Eccentricity', 'Common Outlier Characteristics'
+    'Group ID', 'Orbital Group', 'Total Satellites', 'Flagged Outliers',
+    'Mean Altitude (km)', 'Mean Inclination (°)', 'Mean Eccentricity', 'Common Outlier Features'
 ]
 
 st.dataframe(
@@ -96,19 +96,19 @@ st.dataframe(
     hide_index=True
 )
 
-st.caption("Because contamination is set to 5%, Isolation Forest flags the ~5% most distant satellites within each specific group.")
+st.caption("Isolation Forest uses a contamination setting of 5%, which influences the expected proportion of records labelled as outliers. It does not simply select the satellites with the greatest distance from the group.")
 
 st.markdown("<br>", unsafe_allow_html=True)
 
 # Table of Flagged Satellites with Reasons
-st.markdown("### All Satellites Flagged by Machine Learning")
+st.markdown("### Satellites Flagged by Machine Learning")
 
 ml_flagged_df = df[df['ml_flag'] == 1].copy()
 
 # Compute reasons for all flagged satellites
 ml_flagged_df['Reason'] = ml_flagged_df.apply(lambda r: get_ml_reasons(r)[0], axis=1)
 
-search_term = st.text_input("Filter table by satellite name or NORAD ID:", placeholder="e.g. EXPRESS, 38745, STARLINK...")
+search_term = st.text_input("Filter by satellite name or NORAD ID:", placeholder="e.g. EXPRESS, 38745, STARLINK...")
 if search_term.strip():
     t = search_term.strip().lower()
     ml_flagged_df = ml_flagged_df[
@@ -123,7 +123,7 @@ display_table = ml_flagged_df[[
 
 display_table.columns = [
     'NORAD ID', 'Satellite Name', 'Group', 'Altitude (km)',
-    'Tilt (°)', 'Eccentricity', 'Decision Score', 'Why Flagged by ML'
+    'Inclination (°)', 'Eccentricity', 'Decision Score', 'Why Flagged by ML'
 ]
 
 st.dataframe(
@@ -138,4 +138,4 @@ st.dataframe(
     hide_index=True
 )
 
-st.caption(f"Showing {len(display_table):,} satellites flagged by ML. To inspect all parameters for any individual satellite, use the Satellite Explorer page.")
+st.caption(f"Showing {len(display_table):,} satellites flagged by ML. Use Satellite Explorer to view an individual satellite's orbital features and results.")

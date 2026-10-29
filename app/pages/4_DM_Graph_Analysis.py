@@ -23,8 +23,8 @@ if df.empty:
 render_sidebar(df)
 
 # Header
-st.markdown('<div class="page-title">Discrete Math Graph Analysis</div>', unsafe_allow_html=True)
-st.markdown('<div class="page-subtitle">How a directed 5-nearest-neighbour graph detects isolated satellites flying without close neighbors.</div>', unsafe_allow_html=True)
+st.markdown('<div class="page-title">Discrete Mathematics Graph Analysis</div>', unsafe_allow_html=True)
+st.markdown('<div class="page-subtitle">A directed k-nearest-neighbour graph flags satellites with zero incoming edges and a mean neighbour distance above the dataset-wide mean.</div>', unsafe_allow_html=True)
 
 # Top KPIs
 n_total = len(df)
@@ -35,20 +35,20 @@ global_mean_dist = float(df['global_mean_dist'].iloc[0])
 
 k1, k2, k3, k4 = st.columns(4)
 with k1:
-    render_metric_card("Total Satellites", f"{n_total:,}", "Graph nodes |V|", "#f8fafc")
+    render_metric_card("Total Satellites", f"{n_total:,}", "Graph vertices", "#f8fafc")
 with k2:
     render_metric_card("Flagged by DM", f"{n_dm_flagged}", f"{pct_flagged:.2f}% of all satellites", "#f87171", "#ef4444")
 with k3:
-    render_metric_card("Connected Peers", f"{n_dm_normal:,}", f"{100 - pct_flagged:.2f}% normal spacing", "#34d399", "#10b981")
+    render_metric_card("Not Flagged by DM", f"{n_dm_normal:,}", f"{100 - pct_flagged:.2f}% of all satellites", "#34d399", "#10b981")
 with k4:
-    render_metric_card("Overall Avg Spacing", f"{global_mean_dist:.4f}", "Isolation threshold", "#818cf8")
+    render_metric_card("Mean Neighbour Distance", f"{global_mean_dist:.4f}", "Dataset-wide mean used for comparison", "#818cf8")
 
 st.markdown("<br>", unsafe_allow_html=True)
 
 # Important Note on Physical Distance vs Feature Similarity
 st.markdown("""
 <div class="info-box">
-    <b>Important Distinction:</b> Graph neighbour connections represent similarity across orbital features (altitude, tilt, shape, speed, and period), <b>not physical distance between satellites in space</b>.
+    <b>Important Distinction:</b> Graph connections represent similarity in orbital features, not physical distance between satellites in space.
 </div>
 """, unsafe_allow_html=True)
 
@@ -65,38 +65,38 @@ X = df[feats].to_numpy()
 nn_model, nn_indices, nn_dists = get_graph_indexer(X)
 
 # --- Interactive Neighbor Network Section ---
-st.markdown("### Satellite Neighbor Network")
-st.caption("Select any satellite to see its 5 closest neighbors and whether those neighbors connect back.")
+st.markdown("### Satellite Neighbour Graph")
+st.caption("Select a satellite to view its five selected neighbours and check which connections go both ways.")
 
 c_ctrl1, c_ctrl2 = st.columns([1, 1.8])
 
 with c_ctrl1:
     filter_mode = st.radio(
         "Choose category:",
-        ["Flagged Isolated Satellites (64)", "Normal Satellites (with close neighbors)", "Search by Name or ID"],
+        ["Satellites Flagged by DM (64)", "Satellites Not Flagged by DM", "Search by Name or ID"],
         horizontal=False
     )
 
 selected_norad = None
 
-if filter_mode == "Flagged Isolated Satellites (64)":
+if filter_mode == "Satellites Flagged by DM (64)":
     flagged_sats = df[df['dm_flag'] == 1].sort_values(by='orbit_height', ascending=False)
     sat_options = {
         f"{row['OBJECT_NAME']} (NORAD {row['NORAD_CAT_ID']}, {row['orbit_height']:.0f} km)": row['NORAD_CAT_ID']
         for _, row in flagged_sats.iterrows()
     }
     with c_ctrl2:
-        choice = st.selectbox("Select isolated satellite:", list(sat_options.keys()))
+        choice = st.selectbox("Select a satellite flagged by DM:", list(sat_options.keys()))
         selected_norad = sat_options.get(choice)
 
-elif filter_mode == "Normal Satellites (with close neighbors)":
+elif filter_mode == "Satellites Not Flagged by DM":
     normal_sats = df[(df['dm_flag'] == 0) & (df['incoming_neighbor_count'] >= 4)].sort_values(by='incoming_neighbor_count', ascending=False).head(100)
     sat_options = {
         f"{row['OBJECT_NAME']} (NORAD {row['NORAD_CAT_ID']}, {row['orbit_height']:.0f} km)": row['NORAD_CAT_ID']
         for _, row in normal_sats.iterrows()
     }
     with c_ctrl2:
-        choice = st.selectbox("Select normal satellite:", list(sat_options.keys()))
+        choice = st.selectbox("Select a satellite not flagged by DM:", list(sat_options.keys()))
         selected_norad = sat_options.get(choice)
 
 else:
@@ -277,7 +277,7 @@ if selected_norad is not None:
         col_g_plot, col_g_status = st.columns([1.3, 1])
         with col_g_plot:
             st.plotly_chart(fig_net, use_container_width=True, config=PLOTLY_CONFIG)
-            st.caption("Green solid arrows: mutual neighbors. Red dashed arrows: one-way only (neighbor points elsewhere). Dotted gray lines: connections among the neighbors themselves.")
+            st.caption("Solid green arrows: connections in both directions. Dashed red arrows: connections in one direction only. Dotted grey lines: connections between the selected neighbours.")
             
         with col_g_status:
             in_count = int(target_row.get('incoming_neighbor_count', 0))
@@ -286,13 +286,13 @@ if selected_norad is not None:
             tilt_val = float(target_row.get('INCLINATION', 0.0))
             
             if is_dm_flagged:
-                status_title = "⚠️ Isolated Orbit"
+                status_title = "Zero Incoming Edges"
                 status_color = "#ef4444"
-                status_desc = f"This satellite points to its 5 closest neighbors, but <b>0 satellites point back</b> to it. Its neighbors belong to other satellite groups and point to each other instead. It flies alone in space without close neighbors."
+                status_desc = f"This satellite points to its five selected neighbours, but no other satellite selected it as one of its five nearest neighbours. Its mean distance to those neighbours is above the dataset-wide mean."
             else:
-                status_title = "✅ Connected Orbit"
+                status_title = "Incoming Connections"
                 status_color = "#10b981"
-                status_desc = f"This satellite has <b>{reciprocal_count} mutual neighbors</b> (and {in_count} other satellites total have it as a close neighbor). It flies in a group with other satellites."
+                status_desc = f"{reciprocal_count} neighbours have connections in both directions. In total, {in_count} other satellites selected this satellite as one of their five nearest neighbours."
                 
             st.markdown(f"""
             <div style="background: #1e293b; border: 1px solid rgba(255, 255, 255, 0.08); border-left: 3px solid {status_color}; border-radius: 6px; padding: 18px 20px; margin-top: 10px;">
@@ -313,7 +313,7 @@ if selected_norad is not None:
 st.markdown("<br>", unsafe_allow_html=True)
 
 # In-Degree Distribution Chart
-st.markdown("### Incoming Neighbor Distribution (In-Degree)")
+st.markdown("### Incoming Edge Count")
 
 in_deg_counts = df['incoming_neighbor_count'].value_counts().sort_index().reset_index()
 in_deg_counts.columns = ['In_Degree', 'Count']
@@ -334,26 +334,26 @@ fig_deg.update_traces(
 )
 layout_deg = get_plotly_layout(height=230)
 layout_deg['showlegend'] = False
-layout_deg['xaxis']['title'] = "Number of Other Satellites Having This as a Top-5 Neighbor (In-Degree)"
+layout_deg['xaxis']['title'] = "Number of Satellites Pointing to This Satellite"
 layout_deg['yaxis']['title'] = "Number of Satellites"
 layout_deg['yaxis']['rangemode'] = 'tozero'
 layout_deg['margin'] = dict(l=45, r=20, t=10, b=40)
 fig_deg.update_layout(layout_deg)
 st.plotly_chart(fig_deg, use_container_width=True, config=PLOTLY_CONFIG)
 
-st.caption("Red bar: exactly 64 satellites have 0 incoming neighbors (unreciprocated in the 5-NN graph) and an average neighbor distance exceeding the overall average.")
+st.caption("The highlighted bar represents satellites with zero incoming edges and a mean distance to their selected neighbours above the dataset-wide mean. Both conditions are required for the DM flag.")
 
 st.markdown("<br>", unsafe_allow_html=True)
 
 # Table of Flagged Satellites with Reasons
-st.markdown("### All Satellites Flagged by Discrete Math Graph")
+st.markdown("### Satellites Flagged by the DM Graph")
 
 dm_flagged_df = df[df['dm_flag'] == 1].copy()
 
 # Compute reasons for all flagged satellites
 dm_flagged_df['Reason'] = dm_flagged_df.apply(lambda r: get_dm_reasons(r, global_mean_dist)[0], axis=1)
 
-search_term = st.text_input("Filter table by satellite name or NORAD ID:", placeholder="e.g. EXPRESS, 38745...")
+search_term = st.text_input("Filter by satellite name or NORAD ID:", placeholder="e.g. EXPRESS, 38745...")
 if search_term.strip():
     t = search_term.strip().lower()
     dm_flagged_df = dm_flagged_df[
@@ -367,8 +367,8 @@ display_table = dm_flagged_df[[
 ]].sort_values(by='orbit_height', ascending=False)
 
 display_table.columns = [
-    'NORAD ID', 'Satellite Name', 'Altitude (km)', 'Tilt (°)',
-    'Eccentricity', 'Incoming Peers', 'Avg 5-NN Distance', 'Why Isolated in Graph'
+    'NORAD ID', 'Satellite Name', 'Altitude (km)', 'Inclination (°)',
+    'Eccentricity', 'Incoming Edges', 'Mean Distance to Five Neighbours', 'Why Flagged by DM'
 ]
 
 st.dataframe(
@@ -383,4 +383,4 @@ st.dataframe(
     hide_index=True
 )
 
-st.caption(f"Showing all {len(display_table)} satellites flagged by the DM graph. To inspect all orbital parameters for any satellite, use the Satellite Explorer page.")
+st.caption(f"Showing {len(display_table)} satellites flagged by the DM graph. Use Satellite Explorer to inspect an individual satellite's orbital features and results.")

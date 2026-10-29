@@ -21,7 +21,7 @@ render_sidebar(df)
 
 # Header
 st.markdown('<div class="page-title">Satellite Anomaly Overview</div>', unsafe_allow_html=True)
-st.markdown('<div class="page-subtitle">Summary of detector flags across all tracked Low Earth Orbit satellites.</div>', unsafe_allow_html=True)
+st.markdown('<div class="page-subtitle">Summary of ML and DM flags across the satellites in this dataset.</div>', unsafe_allow_html=True)
 
 # Top KPIs
 n_total = len(df)
@@ -36,13 +36,13 @@ pct2 = (n_score2 / n_total) * 100
 
 k1, k2, k3, k4 = st.columns(4)
 with k1:
-    render_metric_card("Total Analysed", f"{n_total:,}", "Active LEO satellites (< 2,000 km)", "#f8fafc")
+    render_metric_card("Total Analysed", f"{n_total:,}", "Active LEO satellites below 2,000 km", "#f8fafc")
 with k2:
     render_metric_card("Score 0 — No flags", f"{n_score0:,}", f"{pct0:.1f}% of all satellites", "#34d399", "#10b981")
 with k3:
     render_metric_card("Score 1 — One flag", f"{n_score1:,}", f"{pct1:.1f}% of all satellites", "#fbbf24", "#f59e0b")
 with k4:
-    render_metric_card("Score 2 — Both flagged", f"{n_score2:,}", f"{pct2:.2f}% of all satellites (review first)", "#f87171", "#ef4444")
+    render_metric_card("Score 2 — Both flagged", f"{n_score2:,}", f"{pct2:.2f}% of all satellites", "#f87171", "#ef4444")
 
 st.markdown("<br>", unsafe_allow_html=True)
 
@@ -88,16 +88,16 @@ with col_exp:
     st.markdown("""
     <div class="info-box">
         <p style="margin-bottom: 8px;">
-            <b>0 — No flags:</b> Neither method flagged the satellite. It operates within standard orbital ranges.
+            <b>0:</b> Neither ML nor DM flagged the satellite.
         </p>
         <p style="margin-bottom: 8px;">
-            <b>1 — One flag:</b> Either Machine Learning or Discrete Math flagged it.
+            <b>1:</b> Either Machine Learning or Discrete Mathematics flagged the satellite.
         </p>
         <p style="margin-bottom: 8px;">
-            <b>2 — Both flagged:</b> Both methods independently flagged it; review this satellite first.
+            <b>2:</b> Both methods flagged the satellite. Review it first.
         </p>
         <p style="margin-top: 12px; margin-bottom: 0px; font-size: 0.78rem; color: #94a3b8;">
-            <b>Note:</b> The score counts detector flags; it does not measure collision risk or the probability of a mechanical problem. ML and DM share some orbital features, so they are not completely independent.
+            <b>Note:</b> The score counts detector flags; it does not measure collision risk or the probability of mechanical failure. ML and DM use some of the same orbital features, so their results are not fully independent.
         </p>
     </div>
     """, unsafe_allow_html=True)
@@ -148,4 +148,4 @@ st.dataframe(
     hide_index=True
 )
 
-st.caption(f"Showing {len(table_display):,} satellites. Use the Satellite Explorer page to view detailed diagnostics for any satellite.")
+st.caption(f"Showing {len(table_display):,} satellites. Use Satellite Explorer to inspect an individual satellite.")

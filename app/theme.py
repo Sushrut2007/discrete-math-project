@@ -138,12 +138,12 @@ def render_sidebar(df):
         
         st.markdown("#### Score Reference")
         st.markdown("""
-        - **Score 0 — No flags**: Neither detector flagged it.
-        - **Score 1 — One flag**: Either ML or DM flagged it.
-        - **Score 2 — Both flagged**: Both detectors flagged it (review first).
+        - **Score 0 — No flags**: Neither method flagged the satellite.
+        - **Score 1 — One flag**: Either ML or DM flagged the satellite.
+        - **Score 2 — Both flagged**: Both methods flagged the satellite. Review first.
         """)
         
-        st.caption("The score counts detector flags; it is not a collision probability or failure rating.")
+        st.caption("The score counts flags; it is not a collision probability or failure rating.")
         
         st.markdown("---")
         if st.button("Reload Dataset", use_container_width=True):
