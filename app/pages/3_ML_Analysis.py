@@ -13,7 +13,7 @@ apply_theme()
 df = load_full_data()
 
 if df.empty:
-    st.error("Catalog data is not available.")
+    st.error("Satellite data is not available.")
     st.stop()
 
 render_sidebar(df)
@@ -31,45 +31,13 @@ n_clusters = int(df['cluster_id'].nunique())
 
 k1, k2, k3, k4 = st.columns(4)
 with k1:
-    render_metric_card("Total Analysed", f"{n_total:,}", "Active LEO catalog", "#f8fafc")
+    render_metric_card("Total Analysed", f"{n_total:,}", "Tracked LEO satellites", "#f8fafc")
 with k2:
-    render_metric_card("Flagged by ML", f"{n_ml_flagged:,}", f"{pct_flagged:.2f}% of catalog", "#f87171", "#ef4444")
+    render_metric_card("Flagged by ML", f"{n_ml_flagged:,}", f"{pct_flagged:.2f}% of all satellites", "#f87171", "#ef4444")
 with k3:
     render_metric_card("Conforming Orbits", f"{n_ml_normal:,}", f"{100 - pct_flagged:.2f}% standard paths", "#34d399", "#10b981")
 with k4:
     render_metric_card("Orbital Groups", f"{n_clusters}", "K-Means clusters (k=5)", "#818cf8")
-
-st.markdown("<br>", unsafe_allow_html=True)
-
-# Why ML Flags Satellites (Intuitive & Technical)
-st.markdown("### How the ML Detector Works")
-
-col_exp1, col_exp2 = st.columns(2)
-
-with col_exp1:
-    st.markdown("""
-    <div style="background: #1e293b; border: 1px solid rgba(255, 255, 255, 0.08); border-left: 3px solid #3b82f6; border-radius: 6px; padding: 16px 20px; height: 100%;">
-        <div style="font-weight: 600; color: #f8fafc; font-size: 0.95rem; margin-bottom: 8px;">Intuitive Explanation</div>
-        <p style="font-size: 0.86rem; color: #cbd5e1; line-height: 1.5; margin-bottom: 8px;">
-            Low Earth Orbit has different functional regions: high-density circular shells around 550 km (like Starlink) versus polar observation paths at 800 km.
-        </p>
-        <p style="font-size: 0.86rem; color: #cbd5e1; line-height: 1.5; margin-bottom: 0px;">
-            If we checked all satellites together, normal polar satellites would be falsely flagged just because they look different from Starlinks. <b>Grouping satellites by altitude and tilt first ensures each satellite is only compared against its actual peers.</b>
-        </p>
-    </div>
-    """, unsafe_allow_html=True)
-
-with col_exp2:
-    st.markdown("""
-    <div style="background: #1e293b; border: 1px solid rgba(255, 255, 255, 0.08); border-left: 3px solid #8b5cf6; border-radius: 6px; padding: 16px 20px; height: 100%;">
-        <div style="font-weight: 600; color: #f8fafc; font-size: 0.95rem; margin-bottom: 8px;">Technical ML Formulation</div>
-        <ul style="font-size: 0.84rem; color: #cbd5e1; line-height: 1.5; margin-bottom: 0px; padding-left: 18px;">
-            <li style="margin-bottom: 6px;"><b>Step 1 (Clustering):</b> K-Means (k=5) partitions the 3D standardized orbital feature space (semi-major axis, eccentricity, inclination).</li>
-            <li style="margin-bottom: 6px;"><b>Step 2 (Outlier Scoring):</b> Inside each cluster, an Isolation Forest builds an ensemble of random decision trees.</li>
-            <li><b>Step 3 (Flagging):</b> Satellites isolated in fewer tree splits receive a negative decision score (&lt; 0) and are flagged as outliers (5% expected contamination rate).</li>
-        </ul>
-    </div>
-    """, unsafe_allow_html=True)
 
 st.markdown("<br>", unsafe_allow_html=True)
 

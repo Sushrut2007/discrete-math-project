@@ -13,7 +13,7 @@ apply_theme()
 df = load_full_data()
 
 if df.empty:
-    st.error("Catalog data is not available.")
+    st.error("Satellite data is not available.")
     st.stop()
 
 render_sidebar(df)

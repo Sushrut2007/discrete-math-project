@@ -128,11 +128,11 @@ def render_sidebar(df):
         
         st.markdown(f"""
         <div style="background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.08); padding: 10px 14px; border-radius: 6px; margin-bottom: 16px;">
-            <div style="font-size: 0.72rem; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.05em;">Catalog Size</div>
+            <div style="font-size: 0.72rem; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.05em;">Total Satellites</div>
             <div style="font-size: 1.05rem; font-weight: 600; color: #f8fafc; margin-top: 2px;">
                 {len(df):,} LEO Satellites
             </div>
-            <div style="font-size: 0.72rem; color: #64748b; margin-top: 4px;">Source: CelesTrak active catalog</div>
+            <div style="font-size: 0.72rem; color: #64748b; margin-top: 4px;">Source: CelesTrak active satellites</div>
         </div>
         """, unsafe_allow_html=True)
         

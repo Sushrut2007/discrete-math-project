@@ -45,20 +45,20 @@ def get_dm_reasons(sat, global_mean=0.8306):
 
     if dm_flag == 0:
         intuitive = "Surrounded by close neighboring satellites in similar orbits."
-        technical = f"Incoming neighbors: {in_deg} | Avg 5-NN distance: {dist:.4f} (<= catalog average {global_mean:.4f})."
+        technical = f"Incoming neighbors: {in_deg} | Avg 5-NN distance: {dist:.4f} (<= overall average {global_mean:.4f})."
         return intuitive, technical
 
     # Flagged: explain why in-degree is 0 and distance is high
     if alt > 1100:
-        intuitive = f"High altitude corridor ({alt:,.0f} km) where satellites are spaced far apart."
+        intuitive = f"High altitude orbit ({alt:,.0f} km) where satellites are spaced far apart."
     elif alt < 350:
         intuitive = f"Low decay orbit ({alt:,.0f} km) with no other satellites nearby."
     elif inc < 45 or (75 <= inc <= 95):
         intuitive = f"Uncommon tilt ({inc:.1f}°) placing it in an empty orbital slot."
     else:
-        intuitive = "Empty orbital corridor with no other satellites flying close nearby."
+        intuitive = "Isolated orbit with no other satellites flying close nearby."
 
-    technical = f"In-degree = 0 (unreciprocated in directed 5-NN graph) and avg distance = {dist:.4f} > catalog threshold ({global_mean:.4f})."
+    technical = f"In-degree = 0 (unreciprocated in directed 5-NN graph) and avg distance = {dist:.4f} > overall average threshold ({global_mean:.4f})."
     return intuitive, technical
 
 
@@ -109,7 +109,7 @@ def get_operator_explanation(sat, df=None):
     dm_flag = bool(sat.get('dm_flag', 0))
     in_deg = int(sat.get('incoming_neighbor_count', 0))
     if dm_flag:
-        reasons.append("No close neighbors: No other satellite in the catalog has this satellite in its 5 nearest neighbors, and its own neighbors are unusually far.")
+        reasons.append("No close neighbors: No other satellite has this satellite in its 5 closest neighbors, and its own neighbors are unusually far away.")
     elif in_deg == 0:
         reasons.append("Outer edge: Sits at the sparse outer edge of its group.")
 

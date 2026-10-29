@@ -21,7 +21,7 @@ render_sidebar(df)
 
 # Header
 st.markdown('<div class="page-title">Satellite Anomaly Overview</div>', unsafe_allow_html=True)
-st.markdown('<div class="page-subtitle">Summary of detector flags across the active Low Earth Orbit catalog.</div>', unsafe_allow_html=True)
+st.markdown('<div class="page-subtitle">Summary of detector flags across all tracked Low Earth Orbit satellites.</div>', unsafe_allow_html=True)
 
 # Top KPIs
 n_total = len(df)
@@ -38,11 +38,11 @@ k1, k2, k3, k4 = st.columns(4)
 with k1:
     render_metric_card("Total Analysed", f"{n_total:,}", "Active LEO satellites (< 2,000 km)", "#f8fafc")
 with k2:
-    render_metric_card("Score 0 — No flags", f"{n_score0:,}", f"{pct0:.1f}% of catalog", "#34d399", "#10b981")
+    render_metric_card("Score 0 — No flags", f"{n_score0:,}", f"{pct0:.1f}% of all satellites", "#34d399", "#10b981")
 with k3:
-    render_metric_card("Score 1 — One flag", f"{n_score1:,}", f"{pct1:.1f}% of catalog", "#fbbf24", "#f59e0b")
+    render_metric_card("Score 1 — One flag", f"{n_score1:,}", f"{pct1:.1f}% of all satellites", "#fbbf24", "#f59e0b")
 with k4:
-    render_metric_card("Score 2 — Both flagged", f"{n_score2:,}", f"{pct2:.2f}% of catalog (review first)", "#f87171", "#ef4444")
+    render_metric_card("Score 2 — Both flagged", f"{n_score2:,}", f"{pct2:.2f}% of all satellites (review first)", "#f87171", "#ef4444")
 
 st.markdown("<br>", unsafe_allow_html=True)
 
