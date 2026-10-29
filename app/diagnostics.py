@@ -33,10 +33,12 @@ def get_ml_reasons(sat):
     return intuitive, technical
 
 
-def get_dm_reasons(sat, global_mean=0.8306):
+def get_dm_reasons(sat, global_mean=None):
     """
     Returns both an intuitive and a technical reason for the DM graph detector outcome.
     """
+    if global_mean is None:
+        global_mean = float(sat.get('global_mean_dist', 0.0223))
     dm_flag = int(sat.get('dm_flag', 0))
     in_deg = int(sat.get('incoming_neighbor_count', 0))
     dist = float(sat.get('mean_neighbor_distance', 0.0))
@@ -45,7 +47,7 @@ def get_dm_reasons(sat, global_mean=0.8306):
 
     if dm_flag == 0:
         intuitive = "Other satellites selected this satellite as a nearest neighbour in the orbital-feature graph."
-        technical = f"Incoming neighbors: {in_deg} | Avg 5-NN distance: {dist:.4f} (<= overall average {global_mean:.4f})."
+        technical = f"Incoming edges: {in_deg} | Mean distance to 5 neighbours: {dist:.4f} (dataset average: {global_mean:.4f})."
         return intuitive, technical
 
     # Flagged: explain why in-degree is 0 and distance is high
@@ -58,7 +60,7 @@ def get_dm_reasons(sat, global_mean=0.8306):
     else:
         intuitive = "No other satellite selected this satellite as one of its five nearest neighbours, and its mean distance to those neighbours is above the dataset-wide mean."
 
-    technical = f"In-degree = 0 (unreciprocated in directed 5-NN graph) and avg distance = {dist:.4f} > overall average threshold ({global_mean:.4f})."
+    technical = f"Incoming edges: 0 | Mean distance to 5 neighbours: {dist:.4f} (above dataset average of {global_mean:.4f})."
     return intuitive, technical
 
 
