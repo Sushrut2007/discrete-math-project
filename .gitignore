@@ -24,6 +24,9 @@ Thumbs.db
 *.tmp
 *.log
 ~$*
+build/
+dist/
+*.zip
 
 
 # Reference-only project
