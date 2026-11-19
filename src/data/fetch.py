@@ -45,17 +45,27 @@ def fetch_celestrak_data(url=CELESTRAK_URL, timeout=30):
     return raw_text
 
 
-def save_raw_data(csv_text, save_dir=RAW_DATA_DIR):
+def save_raw_data(csv_text, save_dir=RAW_DATA_DIR, force=False):
     """
-    Saves the downloaded CSV text to data/raw/latest_satellite_data.csv, overwriting the previous one.
+    Saves the downloaded CSV text to data/raw/latest_satellite_data.csv.
+    Avoids overwriting if existing data is identical (unless force=True).
+    Returns the file Path if saved/updated, or None if data was identical.
     """
     save_folder = Path(save_dir)
     save_folder.mkdir(parents=True, exist_ok=True)
 
     csv_file = save_folder / "latest_satellite_data.csv"
+    raw_bytes = csv_text.encode("utf-8")
+
+    # Check if existing file has identical content
+    if not force and csv_file.exists():
+        with open(csv_file, "rb") as f:
+            existing_bytes = f.read()
+        if existing_bytes == raw_bytes:
+            print(f"Data unchanged: {csv_file.name} is already up to date.")
+            return None
 
     # Write exact raw text to disk
-    raw_bytes = csv_text.encode("utf-8")
     with open(csv_file, "wb") as f:
         f.write(raw_bytes)
 
@@ -66,14 +76,25 @@ def save_raw_data(csv_text, save_dir=RAW_DATA_DIR):
     return csv_file
 
 
-def collect_latest_data(url=CELESTRAK_URL, save_dir=RAW_DATA_DIR):
+def collect_latest_data(url=CELESTRAK_URL, save_dir=RAW_DATA_DIR, force=False):
     """
     Convenience function that downloads and saves the latest satellite data in one call.
+    Handles network errors and invalid responses gracefully.
+    Returns the file Path if new data was saved, or None if unchanged or failed.
     """
-    raw_text = fetch_celestrak_data(url=url)
+    try:
+        raw_text = fetch_celestrak_data(url=url)
+    except requests.RequestException as e:
+        print(f"Network error while connecting to Celestrak: {e}")
+        return None
+    except ValueError as e:
+        print(f"Validation error in downloaded data: {e}")
+        return None
+
     if raw_text is None:
         return None
-    return save_raw_data(raw_text, save_dir=save_dir)
+
+    return save_raw_data(raw_text, save_dir=save_dir, force=force)
 
 
 if __name__ == "__main__":
@@ -81,6 +102,7 @@ if __name__ == "__main__":
 
     parser = argparse.ArgumentParser(description="Download and save active satellite data from Celestrak.")
     parser.add_argument("--url", default=CELESTRAK_URL, help="Custom download URL if needed")
+    parser.add_argument("--force", action="store_true", help="Force overwrite even if data is unchanged")
     args = parser.parse_args()
 
     print("==================================================")
@@ -88,8 +110,8 @@ if __name__ == "__main__":
     print(f" URL: {args.url}")
     print("==================================================")
 
-    saved_file = collect_latest_data(url=args.url)
+    saved_file = collect_latest_data(url=args.url, force=args.force)
     if saved_file:
-        print(f"\nDone! File saved to: {saved_file}")
+        print(f"\nDone! File updated: {saved_file}")
     else:
-        print("\nNo file saved at this time.")
+        print("\nNo updates saved (data is up to date or unavailable).")
