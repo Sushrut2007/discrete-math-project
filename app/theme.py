@@ -1,3 +1,7 @@
+import os
+from pathlib import Path
+from datetime import datetime, timezone
+import requests
 import streamlit as st
 
 CUSTOM_CSS = """
@@ -121,10 +125,21 @@ def get_badge_html(score: int) -> str:
     else:
         return '<span class="score-badge score-2">Score 2 — Both flagged</span>'
 
+def get_latest_data_timestamp() -> str:
+    raw_path = Path(__file__).resolve().parent.parent / "data" / "raw" / "latest_satellite_data.csv"
+    if raw_path.exists():
+        mtime = raw_path.stat().st_mtime
+        dt = datetime.fromtimestamp(mtime, tz=timezone.utc)
+        return dt.strftime("%d %b %Y, %H:%M UTC")
+    return "Not available"
+
+
 def render_sidebar(df):
     with st.sidebar:
         st.markdown("### Satellite Monitoring")
         st.caption("Low Earth Orbit Dataset")
+        
+        timestamp = get_latest_data_timestamp()
         
         st.markdown(f"""
         <div style="background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.08); padding: 10px 14px; border-radius: 6px; margin-bottom: 16px;">
@@ -133,6 +148,9 @@ def render_sidebar(df):
                 {len(df):,} LEO Satellites
             </div>
             <div style="font-size: 0.72rem; color: #64748b; margin-top: 4px;">Source: CelesTrak active satellites</div>
+            <div style="font-size: 0.72rem; color: #94a3b8; margin-top: 6px; border-top: 1px solid rgba(255,255,255,0.06); padding-top: 6px;">
+                Last fetched: <span style="color: #f8fafc; font-weight: 500;">{timestamp}</span>
+            </div>
         </div>
         """, unsafe_allow_html=True)
         
@@ -146,9 +164,44 @@ def render_sidebar(df):
         st.caption("The score counts flags; it is not a collision probability or failure rating.")
         
         st.markdown("---")
-        if st.button("Reload Dataset", use_container_width=True):
-            st.cache_data.clear()
-            st.rerun()
+        if st.button("Check for New Satellite Data", use_container_width=True):
+            with st.spinner("Checking for new orbital data..."):
+                from src.data.fetch import collect_latest_data
+                from data_loader import rerun_full_pipeline
+                
+                # Check for GitHub token to trigger remote GitHub Action workflow
+                token = os.environ.get("GITHUB_TOKEN")
+                if not token and hasattr(st, "secrets") and "GITHUB_TOKEN" in st.secrets:
+                    token = st.secrets["GITHUB_TOKEN"]
+                
+                gh_triggered = False
+                if token:
+                    try:
+                        resp = requests.post(
+                            "https://api.github.com/repos/Sushrut2007/discrete-math-project/actions/workflows/data_collection.yml/dispatches",
+                            headers={
+                                "Authorization": f"Bearer {token}",
+                                "Accept": "application/vnd.github.v3+json"
+                            },
+                            json={"ref": "main"},
+                            timeout=10
+                        )
+                        if resp.status_code == 204:
+                            gh_triggered = True
+                    except Exception:
+                        pass
+                
+                # Check and fetch data
+                updated_file = collect_latest_data()
+                if updated_file:
+                    rerun_full_pipeline()
+                    st.success("New data downloaded! Analysis refreshed.")
+                    st.rerun()
+                else:
+                    if gh_triggered:
+                        st.info("GitHub Action started. Local data is already up to date.")
+                    else:
+                        st.info("Data is already up to date. CelesTrak updates its elements every 2 hours.")
 
 PLOTLY_CONFIG = {
     'displayModeBar': False,
