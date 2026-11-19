@@ -171,8 +171,12 @@ def render_sidebar(df):
                 
                 # Check for GitHub token to trigger remote GitHub Action workflow
                 token = os.environ.get("GITHUB_TOKEN")
-                if not token and hasattr(st, "secrets") and "GITHUB_TOKEN" in st.secrets:
-                    token = st.secrets["GITHUB_TOKEN"]
+                if not token:
+                    try:
+                        if hasattr(st, "secrets") and "GITHUB_TOKEN" in st.secrets:
+                            token = st.secrets["GITHUB_TOKEN"]
+                    except Exception:
+                        token = None
                 
                 gh_triggered = False
                 if token:
