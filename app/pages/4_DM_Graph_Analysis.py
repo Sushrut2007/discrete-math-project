@@ -1,3 +1,14 @@
+import sys
+from pathlib import Path
+
+# Ensure app and project root are in sys.path
+app_dir = Path(__file__).resolve().parent.parent
+if str(app_dir) not in sys.path:
+    sys.path.insert(0, str(app_dir))
+project_root = app_dir.parent
+if str(project_root) not in sys.path:
+    sys.path.insert(0, str(project_root))
+
 import streamlit as st
 import pandas as pd
 import numpy as np
